@@ -41,6 +41,7 @@
     "@babel/plugin-transform-runtime": "^8.0.6",
     "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^8.0.1",
+    "@open-wxa/wxa-baselib": "^0.1.0",
     "@open-wxa/wxa-runner-playwright": "^0.4.1",
     "@playwright/test": "^1.64.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.3",

@@ -4,3 +4,5 @@ dist-h5/
 .swc/
 *.log
 project.private.config.json
+test-results/
+playwright-report/
