@@ -6,7 +6,7 @@ const path = require('path')
 const outputRoot = process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist'
 
 module.exports = {
-  projectName: 'food-checkin-mp',
+  projectName: 'food-checkin',
   date: '2026-10-15',
   /* 原型是 375 宽基准的移动布局。pxtransform 换算：weapp rpx = px × deviceRatio[designWidth]，
      designWidth 375 + ratio 2 → 1 设计 px = 2rpx（= 750 设计稿语义），两端同源（Taro.pxTransform 公式一致）。 */

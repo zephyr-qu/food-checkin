@@ -110,7 +110,7 @@ export function fpBuildBackup() {
 
   return {
     fpBackup: FP_BACKUP_VERSION,
-    app: 'food-checkin-mp',
+    app: 'food-checkin',
     exportedAt: new Date().toISOString(),
     records,
     shops,

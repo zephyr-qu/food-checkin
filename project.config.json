@@ -1,6 +1,6 @@
 {
   "miniprogramRoot": "dist/",
-  "projectname": "food-checkin-mp",
+  "projectname": "food-checkin",
   "description": "X师傅美食记 · 美食打卡",
   "appid": "touristappid",
   "setting": {

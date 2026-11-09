@@ -25,7 +25,7 @@ describe('fpBuildBackup', () => {
     const b = fpBuildBackup()
     expect(b.fpBackup).toBe(FP_BACKUP_VERSION)
     expect(b.records).toEqual([REC])
-    expect(b.app).toBe('food-checkin-mp')
+    expect(b.app).toBe('food-checkin')
     expect(typeof b.exportedAt).toBe('string')
   })
 
