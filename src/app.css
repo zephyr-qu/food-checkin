@@ -1,0 +1,10 @@
+/* 页面级兜底排版。
+   配色 / 材质 token 全部单源于 styles/fp.css（page 段 + .fp-app 段），这里不定义任何 token，
+   避免双头配色把 --cut 之类的结构值改成另一套单位（rpx）导致层叠错乱。
+   --canvas 来自 fp.css 的 page 段；文字色与字号由满屏的 .fp-app 承担。 */
+page {
+  background-color: var(--canvas);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,25 @@
+{
+  "desc": "美食打卡小程序的搜索索引配置。五屏都值得被索引 —— 这类应用很吃「成都美食」「乐山小吃」这类微信搜索流量。",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "pages/timeline/index"
+    },
+    {
+      "action": "allow",
+      "page": "pages/city/index"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/detail/index"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/compose/index"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/shop/index"
+    }
+  ]
+}

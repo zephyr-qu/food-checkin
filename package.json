@@ -1,0 +1,63 @@
+{
+  "name": "food-checkin-mp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "好吃的 · 美食打卡小程序（Taro 4 / React）",
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "build:weapp": "taro build --type weapp",
+    "dev:h5": "taro build --type h5 --watch",
+    "build:h5": "taro build --type h5",
+    "lint": "eslint src tools config test --ext .js,.jsx",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run test && npm run test:e2e && npm run build:weapp && npm run build:h5"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.26.0",
+    "@tarojs/components": "4.3.0",
+    "@tarojs/helper": "4.3.0",
+    "@tarojs/plugin-framework-react": "4.3.0",
+    "@tarojs/plugin-platform-h5": "4.3.0",
+    "@tarojs/plugin-platform-weapp": "4.3.0",
+    "@tarojs/react": "4.3.0",
+    "@tarojs/router": "4.3.0",
+    "@tarojs/runtime": "4.3.0",
+    "@tarojs/shared": "4.3.0",
+    "@tarojs/taro": "4.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-proposal-decorators": "^8.0.2",
+    "@babel/plugin-transform-class-properties": "^8.0.1",
+    "@babel/plugin-transform-runtime": "^8.0.6",
+    "@babel/preset-env": "^8.0.7",
+    "@babel/preset-react": "^8.0.1",
+    "@open-wxa/wxa-runner-playwright": "^0.4.1",
+    "@playwright/test": "^1.64.1",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.3",
+    "@tarojs/cli": "^4.3.0",
+    "@tarojs/webpack5-runner": "4.3.0",
+    "@types/react": "^18.3.12",
+    "babel-jest": "^29.7.0",
+    "babel-preset-taro": "4.3.0",
+    "eslint": "^8.57.1",
+    "eslint-config-taro": "^4.3.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jest": "^29.7.0",
+    "react-refresh": "^0.19.0",
+    "sass": "^1.80.0",
+    "sass-loader": "^14.2.0",
+    "webpack": "^5.91.0",
+    "wxa-runner": "^0.4.1"
+  }
+}

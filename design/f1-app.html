@@ -1,0 +1,2542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FDFCFB">
+<title>X师傅美食记</title>
+<style>
+/* ================================================================
+   X师傅美食记 — F1 菜品墙 · 完整原型
+   配色：Radix UI Colors（sand 灰阶）+ 朱红强调（#8c3a2e，用户指定的旧版印章红）：
+   1–2 步做页面底，3–5 步做面，6–8 步做边框，11–12 步做文字。
+   墙 = 4 列 masonry、双向无限；其余屏都是"从墙上翻开的一张纸"。
+   ================================================================ */
+
+:root{
+  /* ---------- Radix sand（暖灰，对应纸感）---------- */
+  --sand-1:#fdfcfb;
+  --sand-2:#f9f8f7;
+  --sand-3:#f1efee;
+  --sand-4:#e9e7e4;
+  --sand-5:#e2dfdb;
+  --sand-6:#d9d5d1;
+  --sand-7:#cdc8c3;
+  --sand-8:#bbb5ae;
+  --sand-9:#8d8880;
+  --sand-10:#7c766e;
+  --sand-11:#605d58;
+  --sand-12:#1f1d1a;
+
+  /* ---------- 朱红（强调色，用户指定的旧版印章红；全站唯一红）---------- */
+  --zhu:#8c3a2e;
+
+  /* ---------- 语义层（Radix 用法）----------
+     页底 1–2 步、面 2–4 步（页底本就该用最浅两步，给强调色与小字留足对比余量） */
+  --backdrop:#000000;            /* 舞台底：Radix black */
+  --paper:var(--sand-2);        /* 页面底：2 步 */
+  --paper-hi:var(--sand-1);     /* 最亮的底（墙背板） */
+  --paper-2:var(--sand-3);      /* 次级面 */
+  --paper-3:var(--sand-4);      /* 再深一档 */
+  --card:var(--sand-1);         /* 纸卡：比页底亮一档，纸上红字 4.9:1 */
+  --ink:var(--sand-12);         /* 正文：12 步 */
+  --ink-hover:var(--sand-11);
+  --red:var(--zhu);              /* 强调：朱红 */
+  --red-strong:var(--zhu);       /* 强调面：同色（旧版单红体系） */
+
+  /* 文字层级：11 步正文 / 9 步次要 / 8 步弱化 */
+  --text:var(--sand-12);
+  --text-muted:var(--sand-11);
+  --text-subtle:var(--sand-9);
+  --on-accent:#fff8f6;
+  --on-ink-strong:var(--sand-1);
+  --on-ink-subtle:rgba(253,252,251,.55);
+
+  /* 边框：6 步弱 / 8 步强 */
+  --border-subtle:var(--sand-6);
+  --border-strong:var(--sand-8);
+  --surface-hover:var(--sand-4);
+
+  /* 兼容旧变量名，避免大范围改动。
+     旧 --ink-40 是 alpha .62（旧纸底上约 5:1），Radix 下要落到 sand-11（5.2:1），
+     不能落到 sand-9（3.07:1，只够大字/图形用）。--ink-70 旧文件就未定义过，一并补上。 */
+  --ink-72:var(--text-muted);
+  --ink-70:var(--text-muted);
+  --ink-66:var(--text-muted);
+  --ink-62:var(--text-muted);
+  --ink-40:var(--text-muted);
+  --ink-55:var(--text-muted);
+  --ink-16:var(--border-subtle);
+
+  /* 评分色阶：用深浅表达"分量"
+     1–2 分 → sand-12（最沉）· 3 分 → sand-9 · 4 分 → sand-11 · 5 分 → 朱红（唯一强调） */
+  --r-low:var(--sand-12);
+  --r-mid:var(--sand-9);
+  --r-high:var(--zhu);
+
+  /* 字号：只三档（正文 12 / 强调 15 / 标题 30），大字用 clamp 撑开 */
+  --fs-body:12px;
+  --fs-lead:15px;
+  --fs-title:30px;
+
+  --serif:"Songti SC","Noto Serif SC","Source Han Serif SC","SimSun","STSong",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Microsoft YaHei","Noto Sans SC","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Courier New",monospace;
+  /* 动效：基础 250ms ease-out，只有一处例外（页面转场需要更从容） */
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease:var(--ease-out);
+  --dur:250ms;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--backdrop);overflow:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{position:fixed;inset:0;display:grid;place-items:center}
+
+.phone{
+  position:relative;width:390px;height:844px;overflow:hidden;
+  background:var(--paper);color:var(--ink);font-family:var(--sans);
+  border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);
+  user-select:none;-webkit-user-select:none;
+}
+.phone input,.phone textarea{user-select:text;-webkit-user-select:text}
+
+.grain{
+  position:absolute;inset:0;z-index:96;pointer-events:none;opacity:.06;mix-blend-mode:multiply;
+  background-image:radial-gradient(var(--text-muted) .5px,transparent .6px);background-size:3px 3px;
+}
+
+/* ---------- 状态栏 ---------- */
+.statusbar{position:absolute;top:0;left:0;right:0;height:52px;z-index:90;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 9px;pointer-events:none}
+.statusbar__time{font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1}
+.statusbar__icons{display:flex;align-items:center;gap:6px;transform:translateY(-1px)}
+.sb-bars{display:flex;align-items:flex-end;gap:1.5px;height:11px}
+.sb-bars i{display:block;width:2.5px;background:var(--ink);border-radius:.5px}
+.sb-bars i:nth-child(1){height:3px}
+.sb-bars i:nth-child(2){height:5px}
+.sb-bars i:nth-child(3){height:7.5px}
+.sb-bars i:nth-child(4){height:10px}
+.sb-5g{font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1}
+.sb-batt{position:relative;width:21px;height:10.5px;border:0.5px solid var(--text-subtle);border-radius:2.5px;padding:1.5px}
+.sb-batt i{display:block;height:100%;width:72%;background:var(--ink);border-radius:1px}
+.sb-batt::after{content:"";position:absolute;right:-2.5px;top:50%;transform:translateY(-50%);width:1.5px;height:4px;background:var(--text-subtle);border-radius:0 1px 1px 0}
+
+/* ---------- 首页：两行报头 ---------- */
+/* .home 必须是定位祖先：.counter / .fab / .toLatest 都用 absolute + bottom 相对它 */
+.home{position:absolute;inset:0;z-index:1}
+.masthead{
+  position:absolute;top:52px;left:0;right:0;z-index:69;
+  padding:0 12px;background:var(--paper);display:flex;flex-direction:column;
+}
+.masthead__row{height:32px;flex:0 0 auto;display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:6px;min-width:0}
+.brand__mark{display:block;width:7px;height:7px;background:var(--red)}
+.brand__name{font-family:var(--serif);font-size:15px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
+.brand__stat{margin-left:auto;font-family:var(--mono);font-size:12px;line-height:1;letter-spacing:.08em;color:var(--ink-62);white-space:nowrap}
+.brand__stat b{font-weight:400;color:var(--ink)}
+/* 四个入口：一行四格，无边框，当前项朱砂下划线。
+   改前是 1.5px 黑框 + 四等分 —— 那种方框在 40px 高里只放 10.5px 的字，
+   四周全是空白，看起来像四个空格子。现在：一行字 + 一行副标（里面有多少），
+   去掉竖分隔线，只用一条贯通细线压住整组，视觉重量轻一半，信息量反而多。 */
+.masthead__rule{height:1.5px;background:var(--ink);margin:0 0 0;flex:0 0 auto}
+.tabbar{display:grid;grid-template-columns:repeat(4,1fr);height:42px;flex:0 0 auto}
+.tabbar button{
+  -webkit-appearance:none;appearance:none;background:transparent;border:0;
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink);
+  cursor:pointer;white-space:nowrap;padding:0 2px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  transition:color 250ms var(--ease-out);
+}
+.tabbar button em{
+  font-style:normal;font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  color:var(--ink-62);line-height:1;
+}
+/* 当前页的那一格：朱砂下划线 + 主色，其余保持墨色 */
+.tabbar button[aria-current="page"]{box-shadow:inset 0 -2.5px 0 var(--red)}
+.tabbar button:hover{color:var(--red)}
+.tabbar button:active{color:var(--red)}
+/* ---------- 墙 ---------- */
+.board{position:absolute;left:0;right:0;top:126px;bottom:58px;z-index:10;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}
+.board::-webkit-scrollbar{width:0;height:0;display:none}
+.wall{position:relative;background:var(--paper-hi)}
+
+.tile{
+  -webkit-appearance:none;appearance:none;position:absolute;left:0;top:0;
+  display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:4px;
+  padding:12px 11px 13px;margin:0;border:0;overflow:hidden;text-align:left;cursor:pointer;
+  font-family:var(--serif);color:var(--ink);transition:filter 250ms var(--ease-out),opacity 250ms var(--ease-out);
+  -webkit-tap-highlight-color:transparent;will-change:transform;
+}
+.tile--in{animation:tileIn 250ms var(--ease) both}
+@keyframes tileIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+.tile:active{filter:brightness(.94)}
+.tile:focus-visible{outline:0.5px solid var(--red);outline-offset:-3px}
+.c-ink:focus-visible,.c-red:focus-visible{outline-color:var(--on-accent)}
+.c-paper{background:var(--paper);outline:0.5px solid var(--border-subtle);outline-offset:-0.5px}
+.c-fade{background:var(--paper-2);outline:0.5px solid var(--border-strong);outline-offset:-0.5px}
+/* 红块 = 实心朱红（#8c3a2e，用户指定的旧版印章红，全站唯一红）+ on-accent 浅字：7.3:1；
+   块上 12px 小字继承浅色（带 opacity 压低），与旧版一致。
+   墨块是中性深色，不抢强调色。 */
+.c-ink{background:var(--ink);color:var(--paper)}
+.c-red{background:var(--red);color:var(--on-accent)}
+
+/* ================================================================
+   评分色阶（全局唯一一处，四处消费：墙 / 详情 / 店页 / 吃什么卡片）
+   色阶直接复用首页墙已有的四色，不另发明一套：
+     1–2 分 → 墨 · 3 分 → 深纸灰 · 4 分 → 墨（= 纸色在浅底上的等价实心）· 5 分 → 朱砂
+   规则：只有满分才给朱砂（唯一强调色）；分数越低越沉；
+         未评分（data-r="0"）→ 空心灰点，不占色。
+   深底（墨 / 朱红块）必须翻色，否则同色相糊：
+     1-2 分墨点糊进墨底 → 翻纸；5 分朱红点在朱红块上直接消失 → 都翻纸（朱红偏深，翻墨只有 2.2:1）；
+     3 分灰翻浅灰；4 分墨点翻纸点。
+   ================================================================ */
+.marks{display:inline-flex;gap:3px;vertical-align:middle}
+.marks i{display:block;width:5px;height:5px;border:0.5px solid var(--ink-40);box-sizing:border-box}
+.marks i.on{background:var(--ink-40);border-color:transparent}
+.marks[data-r="1"] i.on,.marks[data-r="2"] i.on{background:var(--r-low);border-color:transparent}
+.marks[data-r="3"] i.on{background:var(--r-mid);border-color:transparent}
+.marks[data-r="4"] i.on{background:var(--r-low);border-color:transparent}
+.marks[data-r="5"] i.on{background:var(--r-high);border-color:transparent}
+/* 未评分：即便有 .on 也保持空心，不占色（见色阶注释） */
+.marks[data-r="0"] i.on{background:transparent;border-color:var(--ink-40)}
+/* 深底翻色：Radix 的"反相阶"——墨底（ink）上的 12 步字用 1 步纸色。 */
+.c-ink .marks[data-r="4"] i.on{background:var(--paper);border-color:var(--paper);box-shadow:none}
+.c-ink .marks[data-r="3"] i.on{background:var(--paper-3);border-color:transparent}
+.c-ink .marks[data-r="1"] i.on,
+.c-ink .marks[data-r="2"] i.on{background:var(--paper);border-color:transparent}
+.c-ink .marks[data-r="5"] i.on{background:var(--paper);border-color:transparent}
+/* 朱红实心底同理翻色（见色阶注释）：1-2/4/5 分翻纸 · 3 分翻浅灰 · 0 分空心翻纸 */
+.c-red .marks[data-r="4"] i.on{background:var(--paper);border-color:var(--paper);box-shadow:none}
+.c-red .marks[data-r="3"] i.on{background:var(--paper-3);border-color:transparent}
+.c-red .marks[data-r="1"] i.on,
+.c-red .marks[data-r="2"] i.on{background:var(--paper);border-color:transparent}
+.c-red .marks[data-r="5"] i.on{background:var(--paper);border-color:transparent}
+.c-red .marks[data-r="0"] i.on{background:transparent;border-color:var(--paper)}
+
+.tile__ghost{position:absolute;right:-5px;bottom:-12px;z-index:0;font-family:var(--serif);font-weight:700;font-size:96px;line-height:.72;opacity:.085;pointer-events:none}
+.c-ink .tile__ghost,.c-red .tile__ghost{opacity:.11}
+.c-fade .tile__ghost{opacity:.1}
+.tile__hatch{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.05;background-image:repeating-linear-gradient(45deg,currentColor 0 .5px,transparent .5px 7px)}
+.tile__no{position:absolute;top:9px;left:10px;z-index:2;font-family:var(--mono);font-size:12px;line-height:1;letter-spacing:.1em;opacity:.42}
+.tile__rate{position:absolute;top:9px;right:10px;z-index:2;display:flex;gap:2px}
+.tile__rate .marks{gap:2px}
+.tile__rate .marks i{width:4px;height:4px}
+.t-hero .tile__rate{top:13px;right:14px}
+.t-hero .tile__rate .marks{gap:2.5px}
+.t-hero .tile__rate .marks i{width:5px;height:5px}
+.t-tall .tile__rate{top:8px;right:10px}
+.t-small .tile__rate{top:8px;right:9px}
+.t-small .tile__rate .marks{gap:1.5px}
+.t-small .tile__rate .marks i{width:3.5px;height:3.5px}
+.tile__name{position:relative;z-index:2;font-size:var(--fs,28px);line-height:1.04;font-weight:600;letter-spacing:.01em;max-width:100%}
+.tile__meta{position:relative;z-index:2;max-width:100%;font-family:var(--sans);font-size:12px;line-height:1.35;letter-spacing:.01em;opacity:.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.t-hero{padding:15px 14px 15px}
+.t-hero .tile__name{line-height:1.02;letter-spacing:.005em}
+.t-hero .tile__no{top:13px;left:14px;font-size:12px}
+.t-hero .tile__meta{font-size:12px;opacity:.68;padding-top:8px;margin-top:2px;border-top:0.5px solid var(--on-ink-subtle)}
+.c-paper.t-hero .tile__meta,.c-fade.t-hero .tile__meta{border-top-color:var(--border-subtle)}
+/* 红块实心，分隔线走默认的浅色线（同墨块） */
+.t-wide{padding:12px 12px 13px}
+.t-wide .tile__name{line-height:1.06}
+.t-tall{padding:12px 11px 13px;justify-content:space-between;align-items:flex-start}
+.t-tall .tile__name{writing-mode:vertical-rl;text-orientation:upright;align-self:flex-end;letter-spacing:.12em;line-height:1;max-height:100%;max-width:none;margin-top:13px}
+.t-tall .tile__ghost{right:auto;left:-9px;bottom:-12px;writing-mode:vertical-rl;text-orientation:upright;font-size:64px;line-height:1}
+.t-tall .tile__no{top:9px;left:10px}
+.t-tall .tile__meta{font-size:12px;max-width:calc(100% - 4px);-webkit-line-clamp:2}
+.t-small{padding:9px 9px 10px;gap:3px}
+.t-small .tile__no{top:8px;left:9px;font-size:12px;letter-spacing:.06em}
+.t-small .tile__rate{top:8px;right:9px}
+.t-small .tile__rate i{width:3.5px;height:3.5px}
+.t-small .tile__name{line-height:1.1}
+.t-small .tile__meta{font-size:12px;line-height:1.32}
+.t-small .tile__ghost{opacity:.1}
+
+/* 空态 */
+.empty{padding:70px 26px 40px;text-align:center;display:none;flex-direction:column;align-items:center;gap:16px}
+.empty.on{display:flex}
+.empty__mark{width:44px;height:44px;border:0.5px dashed var(--ink-62);position:relative}
+.empty__mark::before{content:"";position:absolute;inset:11px;border:0.5px solid var(--border-subtle)}
+.empty__t{font-family:var(--serif);font-size:15px;line-height:1.7;color:var(--ink-70)}
+.empty__b{margin-top:4px;height:42px;padding:0 18px;background:var(--ink);color:var(--paper);border:0;font-family:var(--serif);font-size:15px;letter-spacing:.14em;cursor:pointer}
+
+/* 接续提示 */
+.feed{height:66px;display:flex;align-items:center;justify-content:center;gap:9px;opacity:0;transition:opacity 250ms var(--ease-out)}
+.feed.on{opacity:1}
+.feed__bar{display:block;width:26px;height:1px;background:var(--border-strong)}
+.feed__t{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--ink-62);white-space:nowrap}
+
+/* 底部印脚。原来两行小字（7px/8px）—— 规则 8 要求最小 12px，
+   两行 12px 在 58px 里放不下，所以压成一行，把"演示数据"说明留在末尾。
+   规则 2：不再重复"墙上 N 笔"（报头已有），只留数据来源这一条必要信息。 */
+.counter{position:absolute;left:0;right:0;bottom:0;height:58px;z-index:50;background:var(--paper);border-top:0.5px solid var(--ink);display:flex;align-items:center;padding:0 0 0 16px}
+.imprint{display:flex;flex-direction:column;gap:3px;line-height:1.2;min-width:0}
+.imprint__l1{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imprint__l1 b{font-weight:400;color:var(--text)}
+.imprint__l2{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab{
+  -webkit-appearance:none;appearance:none;position:absolute;right:14px;bottom:18px;z-index:55;
+  height:44px;padding:0 16px 0 17px;display:flex;align-items:center;gap:8px;
+  background:var(--ink);color:var(--paper);border:0;cursor:pointer;
+  font-family:var(--serif);font-size:15px;letter-spacing:.12em;
+  box-shadow:0 0 0 5px var(--paper),3px 4px 0 var(--border-subtle);transition:transform 250ms var(--ease-out);
+}
+.fab:active{transform:scale(.975)}
+.fab i{display:block;width:6px;height:6px;background:var(--red);font-style:normal;flex:0 0 auto}
+
+.home-ind{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--ink-62);z-index:93;pointer-events:none}
+
+/* ---------- 回到最新 ---------- */
+.toLatest{
+  -webkit-appearance:none;appearance:none;position:absolute;right:12px;top:134px;z-index:62;
+  height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;
+  background:var(--paper);border:0.5px solid var(--ink);color:var(--ink);cursor:pointer;
+  font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  box-shadow:2px 2px 0 var(--border-subtle);
+  transform:translateY(-5px);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity 250ms var(--ease-out),transform 250ms var(--ease-out),visibility 250ms 250ms;
+}
+.toLatest.on{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity 250ms var(--ease-out),transform 250ms var(--ease-out),visibility 250ms 250ms}
+
+/* ---------- 遮罩 / 排序面板 ---------- */
+.scrim{position:absolute;inset:0;z-index:68;background:var(--border-strong);opacity:0;visibility:hidden;transition:opacity 250ms var(--ease-out),visibility 250ms 250ms}
+.scrim.on{opacity:1;visibility:visible;transition:opacity 250ms var(--ease-out),visibility 250ms 250ms}
+
+/* ---------- 页面（足迹 / 城市 / 店） ---------- */
+.pager{position:absolute;inset:0;z-index:60;pointer-events:none}
+.page{
+  position:absolute;inset:0;background:var(--paper);display:flex;flex-direction:column;
+  padding-top:52px;pointer-events:auto;transform:translateX(100%);
+  transition:transform 250ms var(--ease-out);will-change:transform;
+  box-shadow:-12px 0 30px var(--border-subtle);
+}
+.page.in{transform:none}
+/* 退场中的页立刻让出点击：420ms 动画期间，下面的列表马上可以继续点 */
+.page:not(.in){pointer-events:none}
+.page__bar{height:48px;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 14px 0 4px;border-bottom:0.5px solid var(--ink)}
+.pback{
+  -webkit-appearance:none;appearance:none;width:42px;height:40px;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:0;cursor:pointer;color:var(--ink);font-size:15px;line-height:1;
+}
+.pback:hover{background:var(--surface-hover)}
+.page__title{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page__meta{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-40);white-space:nowrap;padding-left:8px}
+.page__body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none;position:relative}
+.page__body::-webkit-scrollbar{width:0;height:0;display:none}
+
+/* 城市行 */
+.city-row{
+  -webkit-appearance:none;appearance:none;display:flex;flex-direction:column;gap:5px;width:100%;
+  padding:15px 18px 14px;background:transparent;border:0;border-bottom:0.5px solid var(--ink-16);
+  text-align:left;cursor:pointer;color:var(--ink);font-family:var(--sans);
+}
+.city-row:hover{background:var(--surface-hover)}
+.city-row__top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.city-row__name{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:.03em;line-height:1}
+.city-row__num{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-55);white-space:nowrap}
+.city-row__sub{font-size:12px;line-height:1.5;color:var(--ink-40)}
+.city-row__sub b{font-weight:400;color:var(--text-muted)}
+.city-row__chev{color:var(--ink-40);font-size:12px;margin-left:2px}
+
+/* 足迹 = 通讯录式索引：按拼音首字母分组，右侧一条字母轨。
+   改之前是一条平铺列表，城市一多就只能翻；现在点字母直接跳组。
+   轨挂在 .page 下（不是 .page__body 里），否则会跟着内容滚走。 */
+.city-groups{padding-bottom:26px}
+.city-group__h{
+  position:sticky;top:0;z-index:2;display:flex;align-items:baseline;gap:8px;
+  padding:8px 30px 7px 18px;background:var(--paper-2);
+  border-bottom:0.5px solid var(--ink-16);
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.16em;color:var(--ink);
+}
+.city-group__h b{font-family:var(--serif);font-size:15px;letter-spacing:.02em}
+.city-group__h i{font-style:normal;color:var(--ink-55);letter-spacing:.08em;font-size:12px}
+.city-rail{
+  position:absolute;top:52px;right:2px;bottom:8px;width:26px;z-index:5;
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;
+  padding:2px 0;
+}
+.city-rail b{
+  flex:1 1 0;min-height:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink-55);
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.city-rail b:hover{color:var(--red)}
+.city-rail b.on{color:var(--paper);background:var(--ink)}
+/* 点字母时的浮标提示，像通讯录那样 */
+.city-rail__tip{
+  position:absolute;right:26px;top:50%;transform:translateY(-50%);
+  min-width:34px;height:34px;padding:0 8px;display:flex;align-items:center;justify-content:center;
+  background:var(--ink);color:var(--paper);font-family:var(--serif);font-size:30px;font-weight:600;
+  opacity:0;pointer-events:none;transition:opacity 250ms var(--ease-out);
+}
+.city-rail__tip.on{opacity:1}
+/* 分组行比原来紧凑：一屏能看 6~7 座城，翻得更少 */
+.city-groups .city-row{padding:13px 30px 12px 18px}
+
+/* 店页 */
+.shop-head{padding:18px 18px 14px;border-bottom:0.5px solid var(--ink)}
+.shop-head__name{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.2;letter-spacing:.01em;margin:0}
+.shop-head__sub{margin:8px 0 0;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-40)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:0.5px solid var(--ink)}
+.stat{padding:14px 0 13px 18px;border-right:0.5px solid var(--ink-16)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;line-height:1}
+.stat span{display:block;margin-top:7px;font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-40)}
+.dish-row{
+  -webkit-appearance:none;appearance:none;width:100%;display:flex;align-items:center;gap:10px;
+  padding:13px 18px;background:transparent;border:0;border-bottom:0.5px solid var(--ink-16);
+  text-align:left;cursor:pointer;color:var(--ink);font-family:var(--sans);
+}
+.dish-row:hover{background:var(--surface-hover)}
+.dish-row__name{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.01em}
+.dish-row__shop{font-size:12px;color:var(--ink-40)}
+.dish-row__date{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-40)}
+/* 店页 / 卡片 / 详情的评分点：形状沿用各自尺寸，颜色统一走上面的 .marks 色阶 */
+.dish-row__stars{display:inline-flex;gap:2px;vertical-align:middle}
+.dish-row__stars i{width:4px;height:4px}
+.page-foot{padding:14px 18px 30px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-40)}
+.clist{border-top:0.5px solid var(--ink);margin-top:8px}
+.clist__h{padding:12px 18px 10px;font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--ink-40)}
+.footnote{padding:18px 18px 26px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink-62)}
+.page-empty{padding:60px 26px;text-align:center;font-family:var(--serif);font-size:15px;line-height:1.8;color:var(--ink-40)}
+
+/* ---------- 排行榜（F3 的菜谱语言：纸白、双细线、章节号、点线引导） ---------- */
+.rank{padding:2px 18px 26px}
+.rank__sec{padding-top:15px}
+.rank__head{display:flex;align-items:baseline;gap:9px;padding-bottom:6px;border-bottom:0.5px solid var(--ink-16)}
+.rank__no{font-family:var(--serif);font-size:15px;line-height:1;color:var(--red);letter-spacing:.02em}
+.rank__t{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.06em}
+.rank__n{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-40)}
+.rank__row{
+  -webkit-appearance:none;appearance:none;width:100%;display:flex;align-items:baseline;gap:8px;
+  padding:7px 0 6px;background:transparent;border:0;cursor:pointer;text-align:left;
+  color:var(--ink);font-family:var(--sans);
+}
+.rank__row:hover{background:var(--surface-hover)}
+.rank__name{font-size:12px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%}
+.rank__dots{flex:1;min-width:12px;border-bottom:0.5px dotted var(--ink-62);transform:translateY(-3px)}
+.rank__v{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink-55);white-space:nowrap}
+.rank__v em{font-style:normal;font-size:12px;color:var(--ink-40);margin-left:1px}
+.rank__empty{padding:9px 0 4px;font-size:12px;line-height:1.6;color:var(--ink-40)}
+/* 「只列前 5 家，另有 26 家」——克制的一行，交代截断而不是静默吞掉 */
+.rank__more{padding:9px 0 2px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-62)}
+.rank__hint{padding:24px 18px 30px;font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--ink-62)}
+
+/* ---------- 吃什么：转盘（圆心在屏幕外下方，卡片绕它摆动） ---------- */
+.today{flex:1;min-height:0;display:flex;flex-direction:column;padding-top:8px}
+.today__idx{flex:0 0 auto;height:34px;display:flex;align-items:center;justify-content:center;gap:1px}
+.today__idx button{
+  -webkit-appearance:none;appearance:none;width:26px;height:34px;padding:0;border:0;
+  background:transparent;cursor:pointer;display:grid;place-items:center;
+}
+/* 真正的竖条画在按钮的伪元素上：命中区 22×32（过 24×24 的 AA 线），
+   视觉仍是 3px 细条 —— 用大按钮套小图形，而不是把图形本身撑大。 */
+.today__idx button::before{
+  content:"";display:block;width:3px;height:11px;background:var(--border-strong);
+  transition:height 250ms var(--ease-out),background 250ms var(--ease-out);
+}
+.today__idx button.on::before{background:var(--red);height:17px}
+/* 转盘舞台：圆心在舞台下方屏幕外，卡片排在它的弧线上，切换时整排一起摆过来 */
+.today__wheel{
+  flex:1;min-height:0;position:relative;overflow:hidden;
+  perspective:1100px;
+  touch-action:pan-y;
+}
+/* 卡片：JS 直接算好弧上坐标（translate + scale + rotate 一点点倾斜），
+   不靠 rotate 绕外圆心凑位移 —— 那会让卡片往一侧偏、摆不出居中对称的弧。 */
+.today__wheel .card{
+  position:absolute;left:50%;top:50%;width:84%;height:420px;max-height:100%;
+  background:var(--card);border:0.5px solid var(--border-subtle);border-radius:6px;
+  padding:20px 20px 18px 26px;display:flex;flex-direction:column;
+  box-shadow:0 10px 22px var(--surface-hover);
+  backface-visibility:hidden;
+  transition:transform 250ms var(--ease-out),opacity 250ms var(--ease-out);
+  will-change:transform,opacity;
+}
+/* 拖拽 / 转圈时关掉过渡，跟手（否则 CSS 过渡会把每帧的 JS 插值再平滑一遍，
+   观感就是"抽风"：位置来回晃、落位还多晃半拍） */
+.today__wheel.drag .card,
+.today__wheel.spin .card{transition:none}
+/* 弧线上的深浅：正面最实，往两边渐淡；摆过 ±60° 淡出，避免叠在一起发糊 */
+.today__wheel .card.is-mid{opacity:.5}
+.today__wheel .card.is-off{opacity:0;pointer-events:none}
+.card > *{position:relative;z-index:1}
+.card__ghost{position:absolute;right:-4px;bottom:26px;z-index:0;font-family:var(--serif);font-weight:700;font-size:168px;line-height:.8;color:var(--ink);opacity:.05;pointer-events:none}
+
+
+.today__wheel .card.today{box-shadow:0 0 0 1.5px var(--red),0 10px 22px var(--surface-hover)}
+.card__top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card__no{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--ink-40)}
+/* 「就吃这个」的章 = 一枚真盖在卡上的方章：白文（朱红底、纸色字）、竖排「今天」、
+   轻微倾斜 + multiply 让红像吃进纸里；边缘内 4px 一圈纸色细线是印章的"双边"。
+   盖下瞬间有个 scale 弹跳（sealIn），像"啪"地落章。 */
+.card__today{
+  display:none;
+  position:absolute;right:14px;top:12px;z-index:5;
+  width:58px;height:58px;box-sizing:border-box;
+  background:
+    radial-gradient(ellipse at 66% 24%, rgba(255,255,255,.14), transparent 58%),   /* 印泥不匀 */
+    var(--red);
+  color:var(--paper);
+  font-family:var(--serif);font-weight:700;font-size:15px;line-height:1;
+  writing-mode:vertical-rl;                    /* 竖排两字，读作「今天」 */
+  letter-spacing:.04em;
+  outline:0.5px solid var(--on-ink-strong);   /* 双边：红面里再切一圈纸线 */
+  outline-offset:-4px;
+  transform:rotate(-9deg);
+  mix-blend-mode:multiply;
+  opacity:.94;
+}
+.card.today .card__today{
+  display:flex;align-items:center;justify-content:center;
+  animation:sealIn 250ms cubic-bezier(.2,.85,.3,1.2) both;
+}
+@keyframes sealIn{
+  from{opacity:0;transform:rotate(-26deg) scale(1.9)}
+  to{opacity:.94;transform:rotate(-9deg) scale(1)}
+}
+.card__name{font-family:var(--serif);font-size:48px;line-height:1.08;font-weight:600;margin:20px 0 0;letter-spacing:.01em}
+.card__shop{margin:10px 0 0;font-size:12px;line-height:1.6;color:var(--ink-55)}
+.card__rate{display:flex;align-items:center;gap:7px;margin-top:14px}
+.card__rate .marks{gap:3px}
+.card__rate .marks i{width:5px;height:5px}
+.card__rate b{font-family:var(--mono);font-size:12px;font-weight:400;letter-spacing:.08em;color:var(--ink-55)}
+.card__note{
+  flex:1;min-height:0;margin:16px 0 0;overflow:hidden;
+  font-family:var(--serif);font-size:15px;line-height:1.9;color:var(--ink-70);
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;
+}
+.card__note.is-empty{color:var(--ink-40)}
+.card__why{
+  margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border-subtle);
+  font-family:var(--mono);font-size:12px;line-height:1.5;letter-spacing:.05em;color:var(--ink-55);
+}
+.card__why b{font-weight:400;color:var(--red)}
+.today__foot{flex:0 0 auto;display:flex;gap:10px;padding:12px 18px 18px;border-top:0.5px solid var(--ink)}
+/* "今天从 N 个候选里抽了 10 个" —— 随机这件事要说出来，否则用户以为看的是全部 */
+.today__draw{
+  flex:0 0 auto;padding:8px 18px 0;text-align:center;
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-55);
+}
+.today__foot button{
+  -webkit-appearance:none;appearance:none;flex:1;height:46px;
+  border:0.5px solid var(--ink);background:transparent;color:var(--ink);
+  font-family:var(--serif);font-size:15px;letter-spacing:.16em;cursor:pointer;
+  transition:background 250ms var(--ease-out),color 250ms var(--ease-out);
+}
+.today__foot button:hover{background:var(--surface-hover)}
+.today__foot .pick{background:var(--ink);color:var(--paper)}
+.today__foot .pick:hover{background:var(--ink-hover)}
+.today-empty{padding:70px 28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.today-empty p{font-family:var(--serif);font-size:15px;line-height:1.8;color:var(--ink-70);margin:0}
+
+/* ---------- 搜索层 ---------- */
+.search{
+  position:absolute;inset:0;z-index:64;background:var(--paper);display:flex;flex-direction:column;
+  padding-top:52px;transform:translateY(-101%);visibility:hidden;
+  transition:transform 250ms var(--ease-out),visibility 250ms 250ms;
+}
+.search.in{transform:none;visibility:visible;transition:transform 250ms var(--ease-out),visibility 250ms 250ms}
+.sbar{height:54px;flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:0 12px 0 4px;border-bottom:0.5px solid var(--ink)}
+.sinput{
+  flex:1;min-width:0;border:0;background:transparent;outline:none;padding:8px 2px;
+  font-family:var(--serif);font-size:30px;color:var(--ink);
+}
+.sinput::placeholder{color:var(--ink-55)}
+.sinput::-webkit-search-cancel-button,.sinput::-webkit-search-decoration{-webkit-appearance:none;display:none}
+.sclear{
+  -webkit-appearance:none;appearance:none;width:38px;height:38px;border:0;background:transparent;
+  color:var(--ink);font-size:30px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.sbar__x{font-family:var(--sans)}
+.shits{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 18px;border-bottom:0.5px solid var(--ink-16);min-height:34px}
+.shits__t{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-40)}
+.shits__c{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink-40);display:none;background:none;border:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sboard{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.sboard::-webkit-scrollbar{width:0;height:0;display:none}
+.sempty{padding:54px 26px;text-align:center}
+.sempty__t{font-family:var(--serif);font-size:15px;line-height:1.8;color:var(--ink-70);margin:0}
+.sempty__s{margin:10px 0 0;font-size:12px;line-height:1.7;color:var(--ink-40)}
+.sempty__b{margin-top:18px;height:38px;padding:0 16px;border:0.5px solid var(--ink);background:transparent;color:var(--ink);font-family:var(--serif);font-size:15px;letter-spacing:.1em;cursor:pointer}
+.sug{padding:20px 18px}
+.sug__h{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--ink-40);margin:0 0 10px}
+.sug__list{display:flex;flex-wrap:wrap;gap:7px}
+.sug__b{border:0.5px solid var(--ink-16);background:transparent;color:var(--ink-72);font-family:var(--serif);font-size:12px;padding:6px 10px;cursor:pointer}
+.sug__b:hover{background:var(--surface-hover)}
+
+/* ---------- 详情层 ---------- */
+.detail{
+  position:absolute;inset:0;z-index:80;background:var(--paper);display:flex;flex-direction:column;
+  padding-top:52px;transform:translateY(100%);visibility:hidden;outline:none;
+  transition:transform 250ms var(--ease-out),visibility 250ms 250ms;will-change:transform;
+}
+.detail.in{transform:none;visibility:visible;transition:transform 250ms var(--ease-out),visibility 250ms 250ms}
+.dbar{height:46px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 4px}
+.dback{-webkit-appearance:none;appearance:none;display:flex;align-items:center;gap:7px;height:40px;padding:0 10px;background:transparent;border:0;cursor:pointer;color:var(--ink);font-family:var(--sans);font-size:12px;letter-spacing:.06em}
+.dback em{font-style:normal;font-size:15px;line-height:1;transform:translateY(-.5px)}
+.dback:hover{background:var(--surface-hover)}
+.dcount{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-40)}
+
+.dplate{position:relative;flex:0 0 auto;height:268px;overflow:hidden;background:var(--paper-2);color:var(--ink);display:flex;flex-direction:column;justify-content:flex-end;padding:0 22px 22px}
+.dplate[data-tone="ink"]{background:var(--ink);color:var(--paper)}
+.dplate[data-tone="red"]{background:var(--red);color:var(--on-accent)}
+.dplate__ghost{position:absolute;right:-8px;top:4px;z-index:0;font-family:var(--serif);font-weight:700;font-size:236px;line-height:.78;opacity:.12;pointer-events:none}
+.dplate[data-tone="ink"] .dplate__ghost,.dplate[data-tone="red"] .dplate__ghost{opacity:.1}
+.dplate::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.06;background-image:repeating-linear-gradient(45deg,currentColor 0 .5px,transparent .5px 8px)}
+.dplate__no{position:absolute;top:15px;left:22px;z-index:2;font-family:var(--mono);font-size:12px;letter-spacing:.18em;opacity:.55}
+.dplate__rate{position:absolute;top:14px;right:22px;z-index:2;display:flex}
+.dplate__rate .marks{gap:4px}
+.dplate__rate .marks i{width:5px;height:5px}
+.dname{position:relative;z-index:2;margin:0;font-family:var(--serif);font-size:48px;line-height:1.02;font-weight:600;letter-spacing:.005em}
+.dshop{position:relative;z-index:2;margin:11px 0 0;font-size:12px;line-height:1.6;opacity:.72}
+
+.dbody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:16px 22px 18px}
+.dbody::-webkit-scrollbar{width:0;height:0;display:none}
+.dmeta{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.ddate{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-55)}
+.dstars{display:flex;align-items:center;gap:8px}
+.dstars .marks{gap:3.5px}
+.dstars .marks i{width:9px;height:9px}
+.dstars b{font-family:var(--mono);font-size:12px;letter-spacing:.08em;font-weight:400;color:var(--ink-55)}
+.drule{height:1px;background:var(--ink-16);margin:14px 0 0}
+.dnote-wrap{position:relative;margin-top:0}
+.dnote-wrap::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(to bottom,transparent 0 30px,var(--border-subtle) 30px 31px);-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 72%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 72%,transparent 100%)}
+.dnote{position:relative;margin:0;padding-top:10px;min-height:52px;font-family:var(--serif);font-size:15px;line-height:31px;letter-spacing:.01em;text-indent:2em;text-wrap:pretty}
+.dnote.is-empty{text-indent:0;opacity:.5}
+.dphoto{
+  margin-top:14px;height:62px;border:0.5px dashed var(--border-strong);
+  display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+  background-image:repeating-linear-gradient(45deg,var(--surface-hover) 0 1px,transparent 1px 7px);
+}
+.dphoto span{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--ink-40)}
+.dphoto em{font-style:normal;font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--border-strong)}
+
+.drel{margin-top:18px;border-top:0.5px solid var(--ink-16);padding-top:4px}
+.drel__h{
+  -webkit-appearance:none;appearance:none;width:100%;display:flex;align-items:baseline;gap:8px;
+  padding:9px 0 7px;background:transparent;border:0;cursor:pointer;color:var(--ink);text-align:left;font-family:var(--sans);
+}
+.drel__h .k{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--ink-40);flex:0 0 auto}
+.drel__h .v{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drel__h .n{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink-40);flex:0 0 auto}
+.drel__h .c{margin-left:auto;font-size:12px;color:var(--ink-40);flex:0 0 auto;padding-left:6px}
+.drel__list{display:flex;flex-wrap:wrap;gap:6px;padding:0 0 6px}
+.drel__chip{
+  -webkit-appearance:none;appearance:none;border:0.5px solid var(--ink-16);background:transparent;color:var(--ink);
+  font-family:var(--serif);font-size:12px;padding:5px 9px;cursor:pointer;
+}
+.drel__chip:hover{background:var(--surface-hover)}
+.drel__none{font-size:12px;color:var(--ink-40);padding:0 0 8px}
+
+.dact{flex:0 0 auto;display:flex;gap:10px;padding:10px 18px 16px;border-top:0.5px solid var(--ink);background:var(--paper)}
+.dact button{flex:1;height:44px;border:0.5px solid var(--ink);background:transparent;color:var(--ink);font-family:var(--serif);font-size:15px;letter-spacing:.16em;cursor:pointer;transition:background 250ms var(--ease-out),color 250ms var(--ease-out)}
+.dact button:hover{background:var(--surface-hover)}
+.dact .danger{color:var(--red);border-color:var(--red)}
+.dact .danger:hover{background:rgba(140,58,46,.06)}
+
+/* ---------- 表单（贴一张 / 编辑） ---------- */
+.form{
+  position:absolute;inset:0;z-index:85;background:var(--paper);display:flex;flex-direction:column;
+  padding-top:52px;transform:translateY(101%);visibility:hidden;
+  transition:transform 250ms var(--ease-out),visibility 250ms 250ms;
+}
+.form.in{transform:none;visibility:visible;transition:transform 250ms var(--ease-out),visibility 250ms 250ms}
+.fbar{height:48px;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:0 14px 0 4px;border-bottom:0.5px solid var(--ink)}
+.fbar h2{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.04em;margin:0}
+.fbar span{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-40)}
+.fbar .grow{flex:1}
+.fbody{flex:1;min-height:0;overflow-y:auto;padding:12px 20px 6px;scrollbar-width:none}
+.fbody::-webkit-scrollbar{width:0;height:0;display:none}
+.fsubmit{flex:0 0 auto;padding:10px 20px 22px;border-top:0.5px solid var(--ink-16)}
+
+.photo{position:relative;height:62px;margin-bottom:14px;border:0.5px dashed var(--ink-62);display:flex;align-items:center;justify-content:space-between;padding:0 14px;background-image:repeating-linear-gradient(45deg,var(--surface-hover) 0 1px,transparent 1px 7px)}
+.photo__l{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--ink-40)}
+.photo__l i{display:block;width:7px;height:7px;border:0.5px solid currentColor}
+.photo__r{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--border-strong)}
+
+.field{display:block;margin:0 0 11px;position:relative}
+.flabel{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--ink-40);margin-bottom:2px}
+.flabel i{font-style:normal;color:var(--red);letter-spacing:.08em}
+.field input,.field textarea{
+  display:block;width:100%;border:0;border-bottom:0.5px solid var(--border-strong);
+  background:transparent;border-radius:0;padding:6px 0 8px;font-family:var(--serif);font-size:30px;color:var(--ink);
+  -webkit-appearance:none;appearance:none;
+}
+/* 焦点环只在键盘导航时出现（:focus-visible）。原来的 outline:none 会连焦点环一起吃光，
+   键盘用户看不见自己在哪个输入框 —— 这是 2.4.7 的失败。 */
+.field input:focus-visible,.field textarea:focus-visible{
+  outline:0.5px solid var(--red);outline-offset:3px;border-bottom-color:var(--ink);
+}
+.field textarea{font-size:15px;line-height:1.7;resize:none;min-height:56px;border-bottom-color:var(--border-strong)}
+.field input::placeholder,.field textarea::placeholder{color:var(--ink-55)}
+.field input:focus,.field textarea:focus{border-bottom-color:var(--ink)}
+/* iOS Safari 会缩放 <16px 输入框所在的整页，这里把日期选择器也抬到 16px */
+.field input[type="datetime-local"]{font-family:var(--mono);font-size:15px;letter-spacing:.02em;padding:9px 0}
+.field.bad input{border-bottom-color:var(--red)}
+.field.bad .flabel{color:rgba(140,58,46,.8)}
+.ferr{display:none;margin-top:7px;font-family:var(--sans);font-size:12px;Color:var(--red)}
+.field.bad .ferr{display:block}
+.field.bad{animation:shake 250ms ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}45%{transform:translateX(3px)}70%{transform:translateX(-2px)}}
+
+/* 表单里的评分选择器：是可点的控件（不是展示），但填充色沿用同一套色阶，
+   点到的分数长什么样，存进去之后就长什么样。 */
+.stars{display:flex;align-items:center;gap:8px;margin-top:4px}
+.star{-webkit-appearance:none;appearance:none;width:34px;height:36px;padding:0;background:transparent;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.star i{display:block;width:24px;height:24px;border:0.5px solid var(--ink-62);transition:background 250ms var(--ease-out),border-color 250ms var(--ease-out)}
+.stars[data-pick="1"] .star.on i,.stars[data-pick="2"] .star.on i{background:var(--r-low);border-color:var(--r-low)}
+.stars[data-pick="3"] .star.on i{background:var(--r-mid);border-color:var(--r-mid)}
+.stars[data-pick="4"] .star.on i{background:var(--paper);border-color:var(--ink)}
+.stars[data-pick="5"] .star.on i{background:var(--r-high);border-color:var(--r-high)}
+.stars__label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-40);margin-left:2px}
+
+.suggest{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.suggest:empty{display:none}
+.sg{-webkit-appearance:none;appearance:none;border:0.5px solid var(--ink-16);background:transparent;color:var(--text-muted);font-family:var(--sans);font-size:12px;padding:4px 8px;cursor:pointer}
+.sg:hover{background:var(--surface-hover)}
+.sg:disabled{opacity:.4;cursor:default}
+
+.submit{width:100%;height:52px;background:var(--ink);color:var(--paper);border:0;cursor:pointer;font-family:var(--serif);font-size:15px;letter-spacing:.4em;text-indent:.4em;transition:background 250ms var(--ease-out),transform 250ms var(--ease-out)}
+.submit:active{background:var(--ink-hover);transform:scale(.995)}
+
+/* ---------- toast ---------- */
+.toast{
+  position:absolute;left:14px;right:14px;bottom:84px;z-index:88;
+  background:var(--ink);color:var(--paper);padding:12px 14px 13px;
+  display:flex;align-items:center;gap:12px;overflow:hidden;
+  transform:translateY(14px);opacity:0;visibility:hidden;
+  transition:opacity 250ms var(--ease-out),transform 250ms var(--ease-out),visibility 250ms 250ms;
+  box-shadow:4px 5px 0 var(--border-subtle);
+}
+.toast.on{transform:none;opacity:1;visibility:visible;transition:opacity 250ms var(--ease-out),transform 250ms var(--ease-out),visibility 250ms 250ms}
+.toast__t{flex:1;font-size:12px;line-height:1.4;letter-spacing:.01em}
+.toast__t b{font-family:var(--serif);font-weight:600}
+.toast__undo{
+  -webkit-appearance:none;appearance:none;flex:0 0 auto;padding:6px 9px;background:transparent;
+  border:0.5px solid var(--on-ink-strong);color:var(--paper);font-family:var(--serif);font-size:12px;letter-spacing:.08em;cursor:pointer;
+}
+.toast__bar{position:absolute;left:0;bottom:0;height:2px;background:var(--red);width:100%;transform-origin:0 50%}
+.toast.on .toast__bar{animation:toastbar 5s linear forwards}
+@keyframes toastbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* 新贴上的一块 */
+.tile.just-added::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;border:0.5px solid var(--red);animation:drying 250ms var(--ease) forwards}
+@keyframes drying{0%{opacity:1}100%{opacity:0}}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<main data-phone class="phone" aria-label="X师傅美食记 原型">
+
+  <header class="statusbar" aria-hidden="true">
+    <span class="statusbar__time">16:37</span>
+    <span class="statusbar__icons">
+      <span class="sb-bars"><i></i><i></i><i></i><i></i></span>
+      <span class="sb-5g">5G</span>
+      <span class="sb-batt"><i></i></span>
+    </span>
+  </header>
+
+  <!-- ==================== 首页 ==================== -->
+  <div class="home" id="home">
+    <div class="masthead">
+      <div class="masthead__row">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__name">X师傅美食记</span>
+        </div>
+        <span class="brand__stat">已贴 <b id="brandCount">0</b> 张，<b id="brandCity">0</b> 城</span>
+      </div>
+      <div class="masthead__rule" aria-hidden="true"></div>
+      <div class="tabbar" role="navigation" aria-label="四个入口">
+        <button id="btnSearch" type="button">搜索<em id="tabSubSearch" aria-hidden="true">12 笔</em></button>
+        <button id="btnCities" type="button">足迹<em id="tabSubCities" aria-hidden="true">7 城</em></button>
+        <button id="btnRank" type="button">排行榜<em id="tabSubRank" aria-hidden="true">4 榜</em></button>
+        <button id="btnToday" type="button">吃什么<em id="tabSubToday" aria-hidden="true">12 张</em></button>
+      </div>
+    </div>
+
+    <button class="toLatest" id="toLatest" type="button"><em aria-hidden="true">↑</em>回到最新</button>
+
+    <div class="board" id="board">
+      <div class="wall" id="wall" aria-label="菜品墙"></div>
+      <div class="empty" id="homeEmpty">
+        <span class="empty__mark" aria-hidden="true"></span>
+        <p class="empty__t">还没有记录，<br>贴一张试试。</p>
+        <button class="empty__b" id="emptyFab" type="button">贴一张</button>
+      </div>
+      <div class="feed" id="feed" aria-live="polite">
+        <span class="feed__bar" aria-hidden="true"></span>
+        <span class="feed__t" id="feedText">更早的一笔…</span>
+        <span class="feed__bar" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <footer class="counter">
+      <div class="imprint">
+        <span class="imprint__l1">墙上 <b id="wallCount">0</b> 笔，<b id="cityCount">0</b> 城</span>
+        <span class="imprint__l2">演示数据：12 条真实记录，其余为程序生成</span>
+      </div>
+      <button class="fab" id="fab" type="button"><i aria-hidden="true"></i>贴一张</button>
+    </footer>
+  </div>
+
+  <!-- ==================== 页面层 ==================== -->
+  <div class="pager" id="pager"></div>
+
+  <!-- ==================== 搜索层 ==================== -->
+  <section class="search" id="search" role="dialog" aria-modal="true" aria-label="搜索">
+    <div class="sbar">
+      <button class="pback" id="sBack" type="button" aria-label="关闭搜索">←</button>
+      <input class="sinput" id="sInput" type="search" placeholder="菜名、店、城市、区县" autocomplete="off" enterkeyhint="search">
+      <button class="sclear" id="sClear" type="button" aria-label="清空">×</button>
+    </div>
+    <div class="shits">
+      <span class="shits__t" id="sHits"></span>
+      <button class="shits__c" id="sToWall" type="button">回到无限墙</button>
+    </div>
+    <div class="sboard" id="sboard">
+      <div class="wall" id="swall"></div>
+      <div class="page-foot" id="sEnd"></div>
+      <div class="sug" id="sSuggest"></div>
+      <div class="sempty" id="sEmpty" style="display:none">
+        <p class="sempty__t" id="sEmptyT"></p>
+        <p class="sempty__s">换个菜名、店名或城市试试。</p>
+        <button class="sempty__b" id="sEmptyB" type="button">清空搜索</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 详情层 ==================== -->
+  <section class="detail" id="detail" role="dialog" aria-modal="true" aria-labelledby="dname" tabindex="-1">
+    <div class="dbar">
+      <button class="dback" id="dback" type="button"><em aria-hidden="true">←</em><span>返回</span></button>
+      <span class="dcount" id="dcount"></span>
+    </div>
+    <div class="dplate" id="dplate">
+      <span class="dplate__no" id="dno"></span>
+      <span class="dplate__rate" id="drate" aria-hidden="true"></span>
+      <span class="dplate__ghost" id="dghost" aria-hidden="true"></span>
+      <h1 class="dname" id="dname"></h1>
+      <p class="dshop" id="dshop"></p>
+    </div>
+    <div class="dbody" id="dbody">
+      <div class="dmeta">
+        <span class="ddate" id="ddate"></span>
+        <span class="dstars" id="dstars"></span>
+      </div>
+      <div class="drule"></div>
+      <div class="dnote-wrap"><p class="dnote" id="dnote"></p></div>
+      <div class="dphoto"><span>照片</span><em>无照片</em></div>
+      <div id="drelWrap"></div>
+    </div>
+    <div class="dact">
+      <button id="dEdit" type="button">编 辑</button>
+      <button id="dDel" type="button" class="danger">删 除</button>
+    </div>
+  </section>
+
+  <!-- ==================== 表单 ==================== -->
+  <section class="form" id="form" role="dialog" aria-modal="true" aria-labelledby="fTitle">
+    <div class="fbar">
+      <button class="pback" id="fCancel" type="button" aria-label="关闭">×</button>
+      <h2 id="fTitle">贴一张</h2>
+      <span class="grow"></span>
+    </div>
+    <div class="fbody" id="fBody">
+      <div class="photo">
+        <span class="photo__l"><i aria-hidden="true"></i>照片</span>
+        <span class="photo__r">选填</span>
+      </div>
+
+      <label class="field" id="fEatField">
+        <span class="flabel">吃了什么<i>必填</i></span>
+        <input id="fEat" type="text" placeholder="比如 甜水面" autocomplete="off" enterkeyhint="done">
+        <span class="ferr" id="fErr" role="alert">吃了什么是必填</span>
+      </label>
+
+      <div class="field">
+        <span class="flabel">几星</span>
+        <div class="stars" id="fStars" role="radiogroup" aria-label="评分">
+          <button class="star" type="button" role="radio" aria-checked="false" data-v="1" aria-label="1 星"><i></i></button>
+          <button class="star" type="button" role="radio" aria-checked="false" data-v="2" aria-label="2 星"><i></i></button>
+          <button class="star" type="button" role="radio" aria-checked="false" data-v="3" aria-label="3 星"><i></i></button>
+          <button class="star" type="button" role="radio" aria-checked="false" data-v="4" aria-label="4 星"><i></i></button>
+          <button class="star" type="button" role="radio" aria-checked="false" data-v="5" aria-label="5 星"><i></i></button>
+          <span class="stars__label" id="fStarLabel">未评</span>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="flabel">店</span>
+        <input id="fShop" type="text" placeholder="选填" autocomplete="off">
+        <div class="suggest" id="fShopSug"></div>
+      </label>
+
+      <label class="field">
+        <span class="flabel">城市</span>
+        <input id="fCity" type="text" placeholder="比如 成都" autocomplete="off">
+        <div class="suggest" id="fCitySug"></div>
+      </label>
+
+      <label class="field">
+        <span class="flabel">区县</span>
+        <input id="fDistrict" type="text" placeholder="选填，先填城市" autocomplete="off">
+        <div class="suggest" id="fDistrictSug"></div>
+      </label>
+
+      <label class="field">
+        <span class="flabel">日期时间</span>
+        <input id="fAt" type="datetime-local">
+      </label>
+
+      <label class="field">
+        <span class="flabel">备注</span>
+        <textarea id="fNote" rows="3" placeholder="选填。比如：汤头清而厚，蘸水是灵魂。"></textarea>
+      </label>
+    </div>
+    <div class="fsubmit">
+      <button class="submit" id="fSubmit" type="button">贴 上 去</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast">
+    <span class="toast__t" id="toastT"></span>
+    <button class="toast__undo" id="toastUndo" type="button">撤销</button>
+    <span class="toast__bar" aria-hidden="true"></span>
+  </div>
+
+  <div class="home-ind" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================================================================
+     1. 数据
+     ================================================================ */
+  const RECORDS = [
+    { id:'r1',  eat:'甜水面',   shop:'马旺子川小馆',   city:'成都', district:'锦江区', rating:5, at:'2026-10-09T12:30', note:'面条筋道，甜辣刚好。辣子是现舂的，香得不像话。' },
+    { id:'r2',  eat:'冰粉',     shop:'马旺子川小馆',   city:'成都', district:'锦江区', rating:4, at:'2026-10-09T13:10', note:null },
+    { id:'r3',  eat:'跷脚牛肉', shop:'古市香跷脚牛肉', city:'乐山', district:null,    rating:5, at:'2026-10-08T18:40', note:'汤头清而厚，蘸水是灵魂。' },
+    { id:'r4',  eat:'钵钵鸡',   shop:'叶婆婆钵钵鸡',   city:'乐山', district:null,    rating:4, at:'2026-10-07T20:15', note:null },
+    { id:'r5',  eat:'北京烤鸭', shop:'四季民福',       city:'北京', district:'东城区', rating:5, at:'2026-09-30T18:00', note:'鸭子当桌现片，皮脆得掉渣。' },
+    { id:'r6',  eat:'番茄牛腩', shop:null,             city:null,  district:null,    rating:4, at:'2026-09-27T19:00', note:'自己炖的，番茄放多了。没有店的一条也能存下来。' },
+    { id:'r7',  eat:'蛋烘糕',   shop:'贺记蛋烘糕',     city:'成都', district:null,    rating:3, at:'2026-09-21T16:20', note:null },
+    { id:'r8',  eat:'生煎包',   shop:'大壶春',         city:'上海', district:null,    rating:5, at:'2026-09-14T08:40', note:'第二次来，还是脆底 —— 这家店算吃明白了。' },
+    { id:'r9',  eat:'豆汁儿',   shop:'尹三豆汁',       city:'北京', district:null,    rating:3, at:'2026-10-01T08:10', note:'酸香上头，喝不惯但总算试过了。' },
+    { id:'r10', eat:'热干面',   shop:'蔡林记',         city:'武汉', district:null,    rating:5, at:'2026-08-20T07:50', note:'芝麻酱要趁热拌开，凉了就坨了。' },
+    { id:'r11', eat:'糖油粑粑', shop:'金记糖油粑粑',   city:'长沙', district:null,    rating:5, at:'2026-08-08T16:50', note:'刚出锅烫嘴，甜得理直气壮。' },
+    { id:'r12', eat:'沙茶面',   shop:'月华沙茶面',     city:'厦门', district:null,    rating:5, at:'2026-07-25T11:40', note:'加料要了大肠和豆腐，汤头是花生酱的底。' }
+  ];
+
+  const SPAN = {
+    r1:'hero', r5:'hero', r3:'wide', r6:'wide', r12:'wide',
+    r9:'tall', r10:'tall', r11:'tall',
+    r2:'small', r4:'small', r7:'small', r8:'small'
+  };
+  const TONE = { r1:'ink', r5:'red', r7:'fade', r9:'fade' };
+  const SPAN_RHYTHM = ['hero','small','wide','small','tall','small','hero','wide','small','tall','wide','tall'];
+
+  const CITY = {
+    '成都':{ districts:['锦江区','青羊区','武侯区','成华区'],
+      dishes:['龙抄手','钟水饺','担担面','夫妻肺片','冒菜','肥肠粉','军屯锅盔','三大炮','冷吃兔','红糖糍粑','老妈兔头'],
+      shops:['陈麻婆豆腐','甘食记','小谭豆花','盘飧市','明婷饭店','钟水饺总店','龙抄手春熙路店','王妈手撕烤兔','严太婆锅盔','雨田饭店'] },
+    '乐山':{ districts:null,
+      dishes:['甜皮鸭','豆腐脑','串串香','油炸串串','叶儿粑'],
+      shops:['赵记甜皮鸭','九九豆腐脑','杨记串串','张公桥油炸','苏稽跷脚牛肉'] },
+    '北京':{ districts:['东城区','西城区','朝阳区'],
+      dishes:['卤煮火烧','炸酱面','炒肝','爆肚','麻酱烧饼','豌豆黄','驴打滚','糖火烧','芥末墩'],
+      shops:['姚记炒肝','门框胡同卤煮','白魁老号','护国寺小吃','大董','紫光园','老磁器口豆汁店'] },
+    '上海':{ districts:['黄浦区','静安区','徐汇区'],
+      dishes:['小笼包','葱油拌面','蟹壳黄','排骨年糕','四大金刚','糟钵头','油墩子'],
+      shops:['小杨生煎','佳家汤包','阿娘面馆','王家沙','老吉士','大富贵酒楼'] },
+    '武汉':{ districts:null, dishes:['豆皮','面窝','糊汤粉','武昌鱼','糯米包油条'], shops:['老通城','户部巷豆皮','三镇民生甜食馆','蔡林记江汉路店'] },
+    '长沙':{ districts:null, dishes:['臭豆腐','口味虾','剁椒鱼头','米粉','糖油坨坨','刮凉粉'], shops:['火宫殿','黑色经典','玉楼东','肆姐面粉馆','文和友'] },
+    '厦门':{ districts:null, dishes:['土笋冻','海蛎煎','花生汤','烧肉粽','沙茶烤肉'], shops:['乌糖沙茶面','局口拌面','黄则和花生汤','1980烧肉粽','阿杰五香'] },
+    '西安':{ districts:null, dishes:['肉夹馍','羊肉泡馍','臊子面','凉皮','葫芦头','灌汤包','甑糕'], shops:['老孙家泡馍','子午路张记肉夹馍','魏家凉皮','秦豫肉夹馍','贾三灌汤包','老白家水盆羊肉'] },
+    '广州':{ districts:null, dishes:['肠粉','白切鸡','云吞面','艇仔粥','双皮奶','烧鹅','干蒸烧卖','萝卜牛杂'], shops:['银记肠粉','伍湛记及第粥','宝华面店','陶陶居','炳胜','南信牛奶甜品'] },
+    '重庆':{ districts:null, dishes:['小面','酸辣粉','毛血旺','烤鱼','豆花饭','冰粉凉虾'], shops:['花市豌杂面','秦云老太婆摊摊面','珮姐老火锅','谢家豆花','胖妹面庄'] },
+    '南京':{ districts:null, dishes:['鸭血粉丝汤','盐水鸭','汤包','皮肚面','梅花糕'], shops:['金陵鸭血粉丝','韩复兴盐水鸭','鸡鸣汤包','汪家馄饨','李记清真馆'] },
+    '苏州':{ districts:null, dishes:['苏式汤面','蟹粉小笼','生煎','酒酿饼','奥灶面','鸡头米'], shops:['同得兴','哑巴生煎','裕兴记','万福兴','朱鸿兴'] },
+    '杭州':{ districts:null, dishes:['片儿川','东坡肉','葱包桧','定胜糕','虾爆鳝面','猫耳朵'], shops:['菊英面馆','知味观','方老大面','楼外楼','新丰小吃'] },
+    '扬州':{ districts:null, dishes:['蟹黄汤包','烫干丝','狮子头','扬州炒饭','翡翠烧卖'], shops:['富春茶社','冶春茶社','趣园茶社','蒋家桥饺面店'] },
+    '青岛':{ districts:null, dishes:['辣炒蛤蜊','鲅鱼水饺','海菜凉粉','烤鱿鱼','排骨米饭'], shops:['云霄路小船海鲜','王姐烧烤','双合园','万和春排骨米饭'] },
+    '哈尔滨':{ districts:null, dishes:['锅包肉','红肠','大列巴','杀猪菜','格瓦斯'], shops:['老厨家','张包铺','秋林里道斯','老道外砂锅居'] },
+    '沈阳':{ districts:null, dishes:['老边饺子','鸡架','熏肉大饼','抻面','西塔大冷面'], shops:['老边饺子馆','老四季抻面','李连贵熏肉大饼','西塔大冷面'] },
+    '昆明':{ districts:null, dishes:['过桥米线','汽锅鸡','烧饵块','小锅米线','豌豆粉'], shops:['建新园','福华园','桥香园','端仕小锅米线'] },
+    '贵阳':{ districts:null, dishes:['酸汤鱼','丝娃娃','肠旺面','恋爱豆腐果','糕粑稀饭'], shops:['老凯里酸汤鱼','丝恋丝娃娃','金牌肠旺面','雷家豆腐圆子'] },
+    '南宁':{ districts:null, dishes:['老友粉','柠檬鸭','卷筒粉','酸嘢'], shops:['舒记老友粉','复记老友粉','高峰柠檬鸭'] },
+    '福州':{ districts:null, dishes:['鱼丸','锅边糊','荔枝肉','佛跳墙','肉燕'], shops:['永和鱼丸','耳聋伯元宵','聚春园','同利肉燕'] },
+    '泉州':{ districts:null, dishes:['面线糊','姜母鸭','土笋冻','润饼','四果汤'], shops:['水门国仔面线糊','斯丹姜母鸭','亚佛润饼皮'] },
+    '乌鲁木齐':{ districts:null, dishes:['大盘鸡','烤包子','手抓饭','拉条子','烤全羊'], shops:['米拉吉','五月花','血站大盘鸡','阿布拉的馕'] },
+    '兰州':{ districts:null, dishes:['牛肉面','酿皮','灰豆子','甜醅子','热冬果'], shops:['马子禄牛肉面','吾穆勒蓬灰牛肉面','杜记甜食','正宁路老马家'] },
+    '天津':{ districts:null, dishes:['煎饼果子','耳朵眼炸糕','锅巴菜','狗不理包子','麻花'], shops:['二嫂子煎饼果子','耳朵眼炸糕','大福来锅巴菜','桂发祥'] },
+    '济南':{ districts:null, dishes:['把子肉','甜沫','油旋','九转大肠'], shops:['草包包子铺','超意兴把子肉','弘春美斋'] },
+    '郑州':{ districts:null, dishes:['胡辣汤','烩面','蒸饺','焖饼'], shops:['方中山胡辣汤','合记烩面','葛记焖饼'] },
+    '太原':{ districts:null, dishes:['刀削面','过油肉','头脑','碗托'], shops:['认一力','太原面食店','清和元'] },
+    '拉萨':{ districts:null, dishes:['甜茶','藏面','牦牛肉','酥油茶'], shops:['光明港琼甜茶馆','仓姑寺甜茶馆','雪域餐厅'] }
+  };
+  const THE_KEYS = Object.keys(CITY);
+
+  const NOTES = [
+    '汤头熬得够久，一进门就闻到了。','排了四十分钟，值。','份量比上次小了些。','老板记得我，多给了一勺辣子。',
+    '一个人吃完，撑到走不动。','配的酸萝卜很解腻。','皮薄，筷子一夹就破。','从小吃到大，味道没变。',
+    '天冷了，吃这个正好。','咸了一点，下次让少放盐。','汤没喝完，实在太多。','现做的，等了十分钟也认。',
+    '和记忆里的味道差了一点。','朋友带来的，回头还会来。','两个人点三样，刚好。','吃完在巷子里又走了两圈。'
+  ];
+
+  /* ---------------- 工具 ---------------- */
+  const pad = (n) => String(n).padStart(2, '0');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const len = (s) => Array.from(s || '').length;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const mmdd = (at) => at.slice(5, 7) + '.' + at.slice(8, 10);
+  const timeOf = (at) => (at.split('T')[1] || '').slice(0, 5);
+  const dateOf = (at) => at.slice(0, 10).replace(/-/g, '.');
+  const weekday = (at) => '周' + '日一二三四五六'[new Date(at).getDay()];
+  const metaOf = (r) => {
+    const p = [r.shop, r.city].filter(Boolean);
+    return p.length ? p.join(' ') : '未记店名';
+  };
+  const placeOf = (r) => {
+    const p = [r.shop, r.city, r.district].filter(Boolean);
+    return p.length ? p.join(' ') : '未记店名和城市';
+  };
+
+  /* 城市拼音首字母表：足迹页按字母分组 + 右侧索引轨用。
+     只列本原型会出现的城市（CITY 的 key + 真实记录里的），查不到的首字母归 '#'。
+     单文件零外链，不引拼音库 —— 一张查表就够。 */
+  const PINYIN = {
+    '北京':'B','保定':'B','蚌埠':'B','包头':'B',
+    '成都':'C','重庆':'C','长沙':'C','长春':'C',
+    '大连':'D','东莞':'D','大同':'D',
+    '厦门':'X','西安':'X','徐州':'X','信阳':'X',
+    '福州':'F','佛山':'F',
+    '广州':'G','贵阳':'G','桂林':'G',
+    '杭州':'H','哈尔滨':'H','合肥':'H','海口':'H','惠州':'H',
+    '济南':'J','嘉兴':'J','金华':'J','江门':'J','锦州':'J',
+    '昆明':'K','开封':'K',
+    '兰州':'L','洛阳':'L','拉萨':'L','临沂':'L','柳州':'L',
+    '南京':'N','南昌':'N','南宁':'N','宁波':'N','南通':'N',
+    '上海':'S','深圳':'S','苏州':'S','沈阳':'S','石家庄':'S','绍兴':'S','三亚':'S',
+    '天津':'T','太原':'T','唐山':'T','泰安':'T',
+    '武汉':'W','无锡':'W','乌鲁木齐':'W','温州':'W','潍坊':'W','芜湖':'W',
+    '青岛':'Q','泉州':'Q','秦皇岛':'Q',
+    '扬州':'Y','银川':'Y','烟台':'Y','扬州':'Y','宜宾':'Y','盐城':'Y','珠海':'Z',
+    '郑州':'Z','株洲':'Z','淄博':'Z','中山':'Z','湛江':'Z',
+    '鞍山':'A','安庆':'A',
+    '蚌埠':'B','滨州':'B',
+    '常州':'C','沧州':'C',
+    '鄂尔多斯':'E','恩施':'E',
+    '阜阳':'F','抚顺':'F',
+    '赣州':'G','广元':'G',
+    '邯郸':'H','淮安':'H','黄石':'H','呼伦贝尔':'H',
+    '吉安':'J','荆州':'J','景德镇':'J',
+    '克拉玛依':'K','昆山':'K',
+    '连云港':'L','廊坊':'L','乐山':'L','丽江':'L','龙岩':'L','临汾':'L',
+    '马鞍山':'M','绵阳':'M','牡丹江':'M',
+    '平顶山':'P','莆田':'P','攀枝花':'P',
+    '秦皇岛':'Q','齐齐哈尔':'Q','清远':'Q','衢州':'Q',
+    '日照':'R','瑞安':'R',
+    '商丘':'S','上饶':'S','汕头':'S','宿迁':'S','宿州':'S','十堰':'S',
+    '天水':'T','台州':'T','通化':'T',
+    '芜湖':'W','武威':'W','乌海':'W',
+    '孝感':'X','咸阳':'X','湘潭':'X','襄樊':'X','忻州':'X',
+    '延边':'Y','宜春':'Y','营口':'Y','运城':'Y',
+    '张家界':'Z','镇江':'Z','舟山':'Z','张家口':'Z','周口':'Z','枣庄':'Z','遵义':'Z'
+  };
+  const initialOf = (city) => (city && PINYIN[city]) ? PINYIN[city] : '#';
+  /* 分组排序：字母在前（A→Z），未记城市恒在最后 */
+  const groupSort = (a, b) => {
+    const ia = initialOf(a), ib = initialOf(b);
+    if (ia !== ib) {
+      if (ia === '#') return 1;
+      if (ib === '#') return -1;
+      return ia < ib ? -1 : 1;
+    }
+    return a.localeCompare(b, 'zh-Hans-CN');
+  };
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  /* 评分点阵：颜色由 data-r 决定（CSS 里按 1~5 / 未评 映射到色阶），
+     形状（几个点）照旧由 n 决定。这样墙、详情、店页、卡片四处同色同形。 */
+  function marks(n, cls) {
+    const r = n ? ' data-r="' + n + '"' : ' data-r="0"';
+    let out = '';
+    for (let i = 0; i < 5; i++) out += '<i class="' + (i < n ? 'on' : '') + (i < n && cls ? ' ' + cls : '') + '"></i>';
+    return '<span class="marks"' + r + '>' + out + '</span>';
+  }
+  /* 图注字号：按块型给基准字号的函数（原始版本） */
+  function fsFor(span, l) {
+    /* 严格三档：48（hero/wide 短名）/ 30（其余全部）。
+       规则 8 要求字号不超过 4 档，所以不再为长名单独开一档 ——
+       长名靠 max-width + line-clamp 收在块内，不靠缩小字号。 */
+    if (span === 'hero') return l <= 3 ? 48 : 30;
+    if (span === 'wide') return l <= 4 ? 48 : 30;
+    return 30;
+  }
+  function stampNow() {
+    const d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function toInputValue(at) { return at.slice(0, 16); }
+  function fromInputValue(v) {
+    if (!v) return stampNow();
+    return v.length === 16 ? v : v.slice(0, 16);
+  }
+
+  /* ================================================================
+     2. 生成数据（与 f1-wall 同一套池子）
+     ================================================================ */
+  let spanIdx = 0;
+  function makeRec(at, rng, id) {
+    const city = THE_KEYS[Math.floor(rng() * THE_KEYS.length)];
+    const info = CITY[city];
+    const eat = info.dishes[Math.floor(rng() * info.dishes.length)];
+    const shop = info.shops[Math.floor(rng() * info.shops.length)];
+    const district = info.districts ? info.districts[Math.floor(rng() * info.districts.length)] : null;
+    const rating = 3 + Math.floor(rng() * 3);
+    const note = rng() < 0.55 ? NOTES[Math.floor(rng() * NOTES.length)] : null;
+    const span = SPAN_RHYTHM[spanIdx++ % SPAN_RHYTHM.length];
+    let tone = rating <= 3 ? 'fade' : 'paper';
+    const t = rng();
+    if (t < 0.025) tone = 'ink'; else if (t < 0.05) tone = 'red';
+    return { id, eat, shop, city, district, rating, at, note, span, tone };
+  }
+
+  const NEWER = (() => {
+    const rng = mulberry32(4131);
+    const out = [];
+    for (let d = 10; d <= 21; d++) {
+      for (let k = 0; k < 2; k++) {
+        const hh = k ? 18 + Math.floor(rng() * 3) : 11 + Math.floor(rng() * 3);
+        const mm = Math.floor(rng() * 60);
+        out.push(makeRec('2026-10-' + pad(d) + 'T' + pad(hh) + ':' + pad(mm), rng, 'n' + out.length));
+      }
+    }
+    out.sort((a, b) => b.at.localeCompare(a.at));
+    return out;
+  })();
+
+  const olderRng = mulberry32(9091);
+  let olderDate = new Date(2026, 6, 24, 19, 10);
+  let olderSeq = 0;
+  function makeOlder(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const back = 1 + Math.floor(olderRng() * 4);
+      olderDate = new Date(olderDate.getTime() - back * 864e5 - Math.floor(olderRng() * 6) * 36e5);
+      out.push(makeRec(
+        olderDate.getFullYear() + '-' + pad(olderDate.getMonth() + 1) + '-' + pad(olderDate.getDate())
+          + 'T' + pad(olderDate.getHours()) + ':' + pad(olderDate.getMinutes()),
+        olderRng, 'o' + (olderSeq++)
+      ));
+    }
+    return out;
+  }
+
+  /* ================================================================
+     3. 状态
+     ================================================================ */
+  const REAL = RECORDS.map((r) => ({ ...r, span: SPAN[r.id] || 'wide', tone: TONE[r.id] || 'paper' }));
+  const state = { sort: 'time' };
+  let pool = REAL.slice();
+  let newerIdx = NEWER.length;
+  let undoRecord = null;
+  let undoIndex = -1;
+  let toastTimer = 0;
+
+  const SORTS = {
+    time: (a, b) => b.at.localeCompare(a.at),
+    rating: (a, b) => (b.rating - a.rating) || b.at.localeCompare(a.at),
+    city: (a, b) => {
+      if (!a.city && !b.city) return (b.rating - a.rating) || b.at.localeCompare(a.at);
+      if (!a.city) return 1;
+      if (!b.city) return -1;
+      return a.city.localeCompare(b.city, 'zh-Hans-CN') || b.at.localeCompare(a.at);
+    }
+  };
+  const ordered = () => pool.slice().sort(SORTS[state.sort]);
+
+  /* ================================================================
+     4. DOM
+     ================================================================ */
+  const $ = (id) => document.getElementById(id);
+  const board = $('board'), wallEl = $('wall');
+  const toLatest = $('toLatest'), feed = $('feed'), feedText = $('feedText');
+  const wallCount = $('wallCount'), cityCount = $('cityCount'), homeEmpty = $('homeEmpty');
+  const brandCount = $('brandCount'), brandCity = $('brandCity');
+  const pager = $('pager');
+  const search = $('search'), sInput = $('sInput'), sHits = $('sHits'), sClear = $('sClear'), sBack = $('sBack');
+  const sboard = $('sboard'), swall = $('swall'), sSuggest = $('sSuggest'), sEmpty = $('sEmpty');
+  const sToWall = $('sToWall');
+  const detail = $('detail'), dback = $('dback'), dbody = $('dbody');
+  const dplate = $('dplate'), dno = $('dno'), drate = $('drate'), dghost = $('dghost');
+  const dname = $('dname'), dshop = $('dshop'), ddate = $('ddate'), dstars = $('dstars');
+  const dnote = $('dnote'), dcount = $('dcount'), drelWrap = $('drelWrap');
+  const dEdit = $('dEdit'), dDel = $('dDel');
+  const form = $('form'), fTitle = $('fTitle'), fCancel = $('fCancel');
+  const fEatField = $('fEatField'), fEat = $('fEat'), fShop = $('fShop'), fCity = $('fCity');
+  const fDistrict = $('fDistrict'), fAt = $('fAt'), fNote = $('fNote'), fSubmit = $('fSubmit');
+  const fShopSug = $('fShopSug'), fCitySug = $('fCitySug'), fDistrictSug = $('fDistrictSug');
+  const fStars = $('fStars'), fStarLabel = $('fStarLabel');
+  const toast = $('toast'), toastT = $('toastT'), toastUndo = $('toastUndo');
+
+  /* ================================================================
+     5. 菜块
+     ================================================================ */
+  /* 内容签名：编辑一笔之后，窗口化渲染靠它判断这个节点要不要重建 */
+  function tileSig(r) {
+    return [r.eat, r.shop, r.city, r.district, r.rating, r.at, r.note, r.span, r.tone].join('\u0001');
+  }
+  function createTile(r) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'tile t-' + r.span + ' c-' + r.tone;
+    el.dataset.id = r.id;
+    el.style.setProperty('--fs', fsFor(r.span, len(r.eat)) + 'px');
+    el.setAttribute('aria-label', r.eat + '，' + (r.shop || '没记店名') + '，' + (r.rating ? r.rating + ' 分' : '未评'));
+    el.innerHTML =
+      '<span class="tile__hatch" aria-hidden="true"></span>' +
+      '<span class="tile__ghost" aria-hidden="true">' + esc(Array.from(r.eat)[0] || '') + '</span>' +
+      '<span class="tile__no">' + esc(mmdd(r.at)) + '</span>' +
+      (r.rating ? '<span class="tile__rate" aria-hidden="true">' + marks(r.rating) + '</span>' : '') +
+      '<span class="tile__name">' + esc(r.eat) + '</span>' +
+      '<span class="tile__meta">' + esc(metaOf(r)) + '</span>';
+    el.addEventListener('click', () => openDetail(r.id));
+    return el;
+  }
+
+  /* ================================================================
+     6. 墙组件（4 列 masonry · 填最矮列 · 只渲染视口附近）
+     ================================================================ */
+  /* UNIT 是瓷砖的基准行高。原来 108px 是按 8px 小字算的；
+     规则 8 把最小字号抬到 12px 之后，块里三行内容（日期/菜名/店·城）更高了，
+     108 装不下会溢出，所以抬到 124。宽高比仍在 1:1.15 附近，视觉比例不变。 */
+  const COL = (390 - 3) / 4, GAP = 1, UNIT = 124;
+  const DIM = { hero:{c:2,r:2}, wide:{c:2,r:1}, tall:{c:1,r:2}, small:{c:1,r:1} };
+
+  function makeWall(scroller, wallNode, onScroll) {
+    const W = {
+      scroller, wallNode, onScroll,
+      list: [], entries: [], byId: new Map(), nodes: new Map(), height: 0
+    };
+
+    W.layout = function () {
+      const queue = W.list.slice();
+      const h = [0, 0, 0, 0];
+      const out = [];
+      let maxUnit = 0;
+      for (let i = 0; i < queue.length; i++) {
+        const rec = queue[i];
+        const d = DIM[rec.span] || DIM.wide;
+        let best = null;
+        for (let c = 0; c + d.c <= 4; c++) {
+          let mx = 0, mn = Infinity;
+          for (let k = c; k < c + d.c; k++) { if (h[k] > mx) mx = h[k]; if (h[k] < mn) mn = h[k]; }
+          if (mx !== mn) continue;
+          if (!best || mx < best.top || (mx === best.top && c < best.c)) best = { c: c, top: mx };
+        }
+        if (!best) {
+          let j = -1;
+          for (let k = i + 1; k < Math.min(queue.length, i + 17); k++) {
+            if ((DIM[queue[k].span] || DIM.wide).c === 1) { j = k; break; }
+          }
+          if (j > 0) { const mv = queue.splice(j, 1)[0]; queue.splice(i, 0, mv); i--; continue; }
+          let c2 = 0, top2 = Infinity;
+          for (let c = 0; c + d.c <= 4; c++) {
+            let mx = 0;
+            for (let k = c; k < c + d.c; k++) if (h[k] > mx) mx = h[k];
+            if (mx < top2) { top2 = mx; c2 = c; }
+          }
+          best = { c: c2, top: top2 };
+        }
+        const y = best.top;
+        for (let k = best.c; k < best.c + d.c; k++) h[k] = y + d.r;
+        if (y + d.r > maxUnit) maxUnit = y + d.r;
+        out.push({
+          rec: rec,
+          x: best.c * (COL + GAP), y: y * (UNIT + GAP),
+          w: d.c * COL + (d.c - 1) * GAP, h: d.r * UNIT + (d.r - 1) * GAP
+        });
+      }
+      W.entries = out;
+      W.byId = new Map(out.map((e) => [e.rec.id, e]));
+      W.height = Math.max(0, maxUnit * (UNIT + GAP) - GAP);
+      W.wallNode.style.height = W.height + 'px';
+      W.wallNode.__entries = out;
+    };
+
+    W.place = function (el, e) {
+      el.style.left = e.x.toFixed(2) + 'px';
+      el.style.top = e.y.toFixed(2) + 'px';
+      el.style.width = e.w.toFixed(2) + 'px';
+      el.style.height = e.h.toFixed(2) + 'px';
+    };
+
+    W.render = function (animateIn) {
+      const st = W.scroller.scrollTop;
+      const H = W.scroller.clientHeight || 660;
+      const lo = st - H * 1.8, hi = st + H * 2.4;
+      const keep = new Set();
+      for (let i = 0; i < W.entries.length; i++) {
+        const e = W.entries[i];
+        if (e.y + e.h > lo && e.y < hi) keep.add(e.rec.id);
+      }
+      W.nodes.forEach((n, id) => {
+        if (!keep.has(id)) { n.el.remove(); W.nodes.delete(id); }
+      });
+      for (let i = 0; i < W.entries.length; i++) {
+        const e = W.entries[i];
+        if (!keep.has(e.rec.id)) continue;
+        let n = W.nodes.get(e.rec.id);
+        if (!n) {
+          const el = createTile(e.rec);
+          W.place(el, e);
+          W.wallNode.appendChild(el);
+          W.nodes.set(e.rec.id, { el: el, sig: tileSig(e.rec) });
+          if (animateIn) {
+            el.classList.add('tile--in');
+            setTimeout(() => el.classList.remove('tile--in'), 360);
+          }
+        } else if (n.sig !== tileSig(e.rec)) {
+          /* 这一笔被编辑过：原地换掉节点，否则窗口化渲染会一直显示旧内容 */
+          const el = createTile(e.rec);
+          W.place(el, e);
+          n.el.replaceWith(el);
+          W.nodes.set(e.rec.id, { el: el, sig: tileSig(e.rec) });
+        } else {
+          W.place(n.el, e);
+        }
+      }
+    };
+
+    W.setList = function (list, animateIn) {
+      W.list = list;
+      W.layout();
+      W.render(animateIn);
+    };
+
+    W.anchor = function () {
+      const st = W.scroller.scrollTop;
+      let best = null;
+      for (let i = 0; i < W.entries.length; i++) {
+        const e = W.entries[i];
+        if (e.y + e.h > st + 2 && (!best || e.y < best.y)) best = e;
+      }
+      return best ? { id: best.rec.id, y: best.y, st: st } : null;
+    };
+    W.restore = function (a) {
+      if (!a) return;
+      const e = W.byId.get(a.id);
+      if (!e) return;
+      W.scroller.scrollTop = Math.max(0, e.y - (a.y - a.st));
+    };
+
+    /* 慢慢翻的顺滑点：scroll 事件合并到 rAF 里做窗口渲染，
+       同一帧多个 scroll 只 render 一次，不再每个事件都同步跑一遍 */
+    let renderQueued = false;
+    scroller.addEventListener('scroll', () => {
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(() => {
+        renderQueued = false;
+        W.render(false);
+        if (onScroll) onScroll();
+      });
+    }, { passive: true });
+
+    return W;
+  }
+
+  const home = makeWall(board, wallEl, () => {
+    updateToLatest();
+    if (loading) return;
+    if (performance.now() < suppressUntil) return;
+    const st = board.scrollTop;
+    if (st <= 2 && canNewer()) { loadMore('newer'); return; }
+    if (st + board.clientHeight > board.scrollHeight - 420) loadMore('older');
+  });
+
+  const searchWall = makeWall(sboard, swall, null);
+
+  /* ================================================================
+     7. 双向接续
+     ================================================================ */
+  let loading = false;
+  let suppressUntil = 0;
+  const canNewer = () => newerIdx > 0;
+
+  async function loadMore(dir) {
+    if (loading) return;
+    if (dir === 'newer' && !canNewer()) return;
+    loading = true;
+    feed.classList.add('on');
+    feedText.textContent = dir === 'older' ? '更早的一笔…' : '刚出锅的一笔…';
+    await sleep(dir === 'older' ? 380 : 300);
+    const a = home.anchor();
+    if (dir === 'older') {
+      pool = pool.concat(makeOlder(12));
+    } else {
+      const from = Math.max(0, newerIdx - 12);
+      pool = NEWER.slice(from, newerIdx).concat(pool);
+      newerIdx = from;
+    }
+    home.setList(ordered(), dir === 'older');
+    home.restore(a);
+    updateChrome();
+    feed.classList.remove('on');
+    loading = false;
+    suppressUntil = performance.now() + 260;
+  }
+
+  /* ================================================================
+     8. 计数 / 回到最新
+     ================================================================ */
+  function citiesInUse() {
+    return new Set(pool.map((r) => r.city).filter(Boolean)).size;
+  }
+  function updateChrome() {
+    wallCount.textContent = pool.length;
+    cityCount.textContent = citiesInUse();
+    /* 报头那行原来写死「已贴 38 张 · 22 城」，和底部印脚（12 笔 · 7 城）同屏对不上。
+       现在跟着同一份数据走：新增/编辑/删除时两处一起变。 */
+    if (brandCount) brandCount.textContent = pool.length;
+    if (brandCity) brandCity.textContent = citiesInUse();
+    homeEmpty.classList.toggle('on', pool.length === 0);
+    wallEl.style.display = pool.length ? '' : 'none';
+    /* 四个入口的副标是活的：让用户在点之前就知道里面有多少东西 */
+    const subCities = $('tabSubCities'), subRank = $('tabSubRank'), subToday = $('tabSubToday'), subSearch = $('tabSubSearch');
+    if (subCities) subCities.textContent = citiesInUse() + ' 城';
+    if (subSearch) subSearch.textContent = pool.length + ' 笔';
+    if (subRank) {
+      const five = pool.filter(r => r.rating === 5).length;
+      const cnt = {};
+      pool.forEach(r => { cnt[r.eat] = (cnt[r.eat] || 0) + 1; });
+      const dup = Object.keys(cnt).filter(k => cnt[k] >= 2).length;
+      const chapters = [five > 0, dup > 0, citiesInUse() > 0, new Set(pool.map(r => r.shop).filter(Boolean)).size > 0].filter(Boolean).length;
+      subRank.textContent = chapters + ' 榜';
+    }
+    /* 副标跟着真实抽中的张数走：抽 10 个就写 10 张，不够 10 个才退到候选数 */
+    if (subToday) subToday.textContent = Math.min(buildDeck().length || pool.length, DECK_N) + ' 张';
+  }
+  function updateToLatest() {
+    const on = board.scrollTop > 260
+      && !detail.classList.contains('in') && !form.classList.contains('in')
+      && !search.classList.contains('in') && !pages.length;
+    toLatest.classList.toggle('on', on);
+  }
+
+  /* ================================================================
+     9. 排序 —— 已移除
+     墙是拼图式的浏览界面：同一堆块换个顺序，用户看不出区别，
+     而"按城市"本质上是一次过滤，那件事交给「足迹」和搜索去做。
+     state.sort 固定为 time，墙永远"最近的先上墙"。
+     ================================================================ */
+
+  /* ================================================================
+     11. 页面栈
+     ================================================================ */
+  let pages = [];
+  let pushLock = 0;   /* push 节流：连点只进一次，防动画期叠页 */
+  let popLock = 0;    /* pop 节流：连点返回只退一层；不影响 push，退场中仍可立刻点下一行 */
+
+  function pushPage(name, params) {
+    const now = performance.now();
+    if (now < pushLock) return null;                      /* 连点两下只进一次 */
+    const top = pages[pages.length - 1];
+    if (top && top.name === name && JSON.stringify(top.params) === JSON.stringify(params)) return top; /* 同页重复 push */
+    pushLock = now + 380;                                 /* ≈ 过渡时长 + 余量 */
+    const el = document.createElement('section');
+    el.className = 'page';
+    el.dataset.page = name;
+    el.innerHTML = pageHTML(name, params);
+    pager.appendChild(el);
+    const rec = { name, params, el };
+    pages.push(rec);
+    bindPage(rec);
+    void el.offsetWidth;                                  /* 强制首帧布局后立刻开滑，省掉双 rAF ≈30ms 起步延迟 */
+    el.classList.add('in');
+    toLatest.classList.remove('on');
+    return rec;
+  }
+
+  function popPage() {
+    const now = performance.now();
+    if (now < popLock) return;                            /* 退场动画中连点返回只退一层 */
+    popLock = now + 300;
+    pushLock = 0;                                         /* 退场即解锁 push：返回后可立刻点下一行 */
+    const p = pages.pop();
+    if (!p) return;
+    p.el.classList.remove('in');                          /* .page:not(.in) 即刻 pointer-events:none */
+    setTimeout(() => p.el.remove(), 360);
+    if (!pages.length) updateToLatest();
+  }
+
+  function replaceTopPage() {
+    const p = pages[pages.length - 1];
+    if (!p) return;
+    p.el.innerHTML = pageHTML(p.name, p.params);
+    bindPage(p);
+  }
+
+  function pageHTML(name, params) {
+    if (name === 'cities') return citiesHTML();
+    if (name === 'city') return cityHTML(params.city);
+    if (name === 'shop') return shopHTML(params.shop);
+    if (name === 'rank') return rankHTML();
+    if (name === 'today') return todayHTML();
+    return '';
+  }
+
+  function bindPage(rec) {
+    const el = rec.el;
+    el.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', popPage));
+    el.querySelectorAll('[data-city]').forEach((b) => {
+      b.addEventListener('click', () => pushPage('city', { city: b.dataset.city }));
+    });
+    el.querySelectorAll('[data-shop]').forEach((b) => {
+      b.addEventListener('click', () => pushPage('shop', { shop: b.dataset.shop }));
+    });
+    el.querySelectorAll('[data-open]').forEach((b) => {
+      b.addEventListener('click', () => openDetail(b.dataset.open));
+    });
+    el.querySelectorAll('[data-new]').forEach((b) => {
+      b.addEventListener('click', () => openForm(null));
+    });
+    if (rec.name === 'city') {
+      const scroller = el.querySelector('[data-citywall]');
+      if (scroller) {
+        const list = pool.filter((r) => (r.city || '') === (rec.params.city || '')).sort(SORTS[state.sort]);
+        const w = makeWall(scroller, scroller.querySelector('.wall'), null);
+        w.setList(list, true);
+      }
+    }
+    if (rec.name === 'cities') bindCitiesIndex(rec);
+    if (rec.name === 'today') bindToday(rec);
+  }
+
+  /* ================================================================
+     11.5 排行榜（借用 F3 的菜谱语言）
+     榜单只列前 RANK_TOP 名：榜的意义在"排在前面的那几个"，
+     第 11 名往后在"我吃过什么"这种私人数据里没有区分度，
+     而且无限列下去会把页面撑成列表（实测 36 笔时店榜已 31 行 / 2.9 屏）。
+     章节头仍写「共 N」，超出的部分在章末用一行克制的小字说明，不静默吞掉。
+     ================================================================ */
+  const RANK_TOP = 5;
+
+  function rankHTML() {
+    const five = pool.filter((r) => r.rating === 5).sort((a, b) => b.at.localeCompare(a.at));
+
+    const eatMap = new Map();
+    pool.forEach((r) => { if (!eatMap.has(r.eat)) eatMap.set(r.eat, []); eatMap.get(r.eat).push(r); });
+    const often = [...eatMap.entries()]
+      .filter((e) => e[1].length >= 2)
+      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'zh-Hans-CN'));
+
+    /* 城市榜只排"真有城市"的记录。
+       没记城市的笔不该参加城市榜 —— 它连城市都没有，排进来是拿一个空值去跟
+       成都、乐山比道数，既没有可比性，也占掉一个前 5 的名额。
+       这些笔不会丢：还在墙上、搜索里，足迹页也有「未记城市」那一格可以进。 */
+    const cityMap = new Map();
+    pool.forEach((r) => {
+      if (!r.city) return;
+      if (!cityMap.has(r.city)) cityMap.set(r.city, []);
+      cityMap.get(r.city).push(r);
+    });
+    const cityRows = [...cityMap.entries()].map((e) => ({
+      city: e[0],
+      list: e[1],
+      avg: e[1].reduce((s, r) => s + r.rating, 0) / e[1].length
+    })).sort((a, b) =>
+      b.list.length - a.list.length || b.avg - a.avg || a.city.localeCompare(b.city, 'zh-Hans-CN'));
+
+    const shopMap = new Map();
+    pool.forEach((r) => {
+      if (!r.shop) return;
+      if (!shopMap.has(r.shop)) shopMap.set(r.shop, []);
+      shopMap.get(r.shop).push(r);
+    });
+    const shopRows = [...shopMap.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'zh-Hans-CN'));
+
+    const row = (attr, name, val, unit) =>
+      '<button class="rank__row" type="button" ' + attr + '>' +
+      '<span class="rank__name">' + esc(name) + '</span><span class="rank__dots"></span>' +
+      '<span class="rank__v">' + val + (unit ? '<em>' + unit + '</em>' : '') + '</span></button>';
+
+    /* 取前 RANK_TOP 名；超出的用一行小字交代，而不是静默截断 */
+    const top = (arr) => arr.slice(0, RANK_TOP);
+    const more = (total, unit) =>
+      total > RANK_TOP ? '<div class="rank__more">只列前 ' + RANK_TOP + ' ' + unit + '，另有 ' + (total - RANK_TOP) + ' ' + unit + '</div>' : '';
+
+    const sec = (no, title, count, body) =>
+      '<section class="rank__sec"><div class="rank__head"><span class="rank__no">' + no + '</span>' +
+      '<span class="rank__t">' + title + '</span><span class="rank__n">' + count + '</span></div>' + body + '</section>';
+
+    const empty = (t) => '<div class="rank__empty">' + t + '</div>';
+
+    return '' +
+      '<div class="page__bar"><button class="pback" data-back type="button" aria-label="返回">←</button>' +
+      '<span class="page__title">排行榜</span>' +
+      '<span class="page__meta">' + pool.length + ' 笔，' + citiesInUse() + ' 城</span></div>' +
+      '<div class="page__body"><div class="rank">' +
+      sec('壹', '五星榜', five.length + ' 道',
+        five.length
+          ? top(five).map((r) => row('data-open="' + r.id + '"', r.eat, mmdd(r.at))).join('') + more(five.length, '道')
+          : empty('还没有五分的记录。')) +
+      sec('贰', '最常吃', often.length + ' 道',
+        often.length
+          ? top(often).map((e) => {
+              const latest = e[1].slice().sort((a, b) => b.at.localeCompare(a.at))[0];
+              return row('data-open="' + latest.id + '"', e[0], e[1].length, ' 次');
+            }).join('') + more(often.length, '道')
+          : empty('同一道菜吃过两次才会进榜。')) +
+      sec('叁', '城市榜', cityRows.length + ' 地',
+        cityRows.length
+          ? top(cityRows).map((e) => row('data-city="' + esc(e.city) + '"', e.city, e.list.length, ' 道')).join('') + more(cityRows.length, '地')
+          : empty('还没有记过城市。')) +
+      sec('肆', '店榜', shopRows.length + ' 家',
+        shopRows.length
+          ? top(shopRows).map((e) => row('data-shop="' + esc(e[0]) + '"', e[0], e[1].length, ' 次')).join('') + more(shopRows.length, '家')
+          : empty('还没有记过店名。')) +
+      '<div class="rank__hint">演示数据：12 条真实记录，其余为程序生成</div>' +
+      '</div></div>';
+  }
+
+  /* ================================================================
+     11.6 吃什么（借用 F2 的卡片语言）
+     ================================================================ */
+  const todayEaten = new Set();
+  const DECK_N = 10;   /* 每天一抽：从候选里随机抽 10 张，抽完当天不再变 */
+
+  /* 当天抽中的 10 张。同一天内重进页面要看到同一批（否则"选"没意义），
+     所以用「日期 + 可复现的种子」而不是每次 Math.random()：
+     同一天同一个种子 → 同一批；跨天换一天 → 另一批。 */
+  const dayKey = () => {
+    const d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  };
+  const daySeed = () => {
+    const k = dayKey();
+    let h = 2166136261;
+    for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  };
+
+  function buildDeck() {
+    const byDish = new Map();
+    pool.forEach((r) => {
+      const cur = byDish.get(r.eat);
+      if (!cur || r.at > cur.at) byDish.set(r.eat, r);
+    });
+    const now = Date.now();
+    const cands = [...byDish.values()]
+      .filter((r) => !todayEaten.has(r.eat))
+      .map((r) => {
+        const days = Math.max(0, Math.floor((now - new Date(r.at).getTime()) / 864e5));
+        return { rec: r, days: days, weight: r.rating + days };
+      })
+      .sort((a, b) => b.weight - a.weight || b.rec.at.localeCompare(a.rec.at));
+
+    /* 加权抽 10 个：weight = 评分 + 久未吃天数。
+       做法是把权重累成一条"尺子"，在尺子上按种子等距取 10 个点 ——
+       既保留"高分 + 很久没吃更容易被抽中"，又天然不重复，且同一天结果稳定。 */
+    const n = Math.min(DECK_N, cands.length);
+    if (n <= 0) return [];
+    const rng = mulberry32(daySeed());
+    const total = cands.reduce((s, c) => s + c.weight, 0);
+    const out = [];
+    const used = new Set();
+    /* 等距取点 + 抖动，避免连续两天抽到同一段 */
+    for (let i = 0; i < n; i++) {
+      const base = total * (i + rng()) / n;
+      let acc = 0, pick = cands.length - 1;
+      for (let k = 0; k < cands.length; k++) {
+        acc += cands[k].weight;
+        if (acc >= base) { pick = k; break; }
+      }
+      if (used.has(pick)) pick = cands.findIndex((_, k) => !used.has(k));
+      if (pick < 0) break;
+      used.add(pick);
+      out.push(cands[pick]);
+    }
+    /* 抽完仍按权重降序摆：第一张就是今天最该吃的那个 */
+    return out.sort((a, b) => b.weight - a.weight || b.rec.at.localeCompare(a.rec.at));
+  }
+
+  function todayHTML() {
+    const list = buildDeck();
+    /* 候选总数可能远大于 10，页面上要说清楚"这是从多少个里抽的 10 个" */
+    const candTotal = (() => {
+      const byDish = new Map();
+      pool.forEach((r) => { const c = byDish.get(r.eat); if (!c || r.at > c.at) byDish.set(r.eat, r); });
+      return [...byDish.values()].filter((r) => !todayEaten.has(r.eat)).length;
+    })();
+    const bar = '<div class="page__bar"><button class="pback" data-back type="button" aria-label="返回">←</button>' +
+      '<span class="page__title">吃什么</span>' +
+      '<span class="page__meta">' + (list.length ? '第 01 / ' + pad(list.length) : '') + '</span></div>';
+
+    if (!list.length) {
+      return bar + '<div class="page__body"><div class="today-empty">' +
+        '<span class="empty__mark" aria-hidden="true"></span>' +
+        '<p>还没有可推荐的，先贴一张。</p>' +
+        '<button class="empty__b" type="button" data-new>贴一张</button>' +
+        '</div></div>';
+    }
+
+    const cards = list.map((x, i) => {
+      const r = x.rec;
+      return '<article class="card' + (todayEaten.has(r.eat) ? ' today' : '') + '" data-id="' + r.id + '">' +
+        '<span class="card__ghost" aria-hidden="true">' + esc(Array.from(r.eat)[0] || '') + '</span>' +
+        '<div class="card__top"><span class="card__no">第 ' + pad(i + 1) + ' / ' + pad(list.length) + '</span></div>' +
+        '<h2 class="card__name">' + esc(r.eat) + '</h2>' +
+        '<p class="card__shop">' + esc(placeOf(r)) + '</p>' +
+        '<div class="card__rate">' + marks(r.rating) +
+        '<b>' + (r.rating ? r.rating + ' 分' : '未评') + '</b></div>' +
+        '<p class="card__note' + (r.note ? '' : ' is-empty') + '">' + esc(r.note || '没有留下备注。') + '</p>' +
+        '<div class="card__why">上次吃是 <b>' + x.days + ' 天前</b>' + (r.city ? '，' + esc(r.city) : '') + '</div>' +
+        /* 章放在卡片直接子级的最后：.card>* 给它 z-index:1，DOM 靠后才盖得住菜名 */
+        '<span class="card__today">今天</span>' +
+        '</article>';
+    }).join('');
+
+    const bars = list.map((x, i) =>
+      '<button type="button" class="' + (i === 0 ? 'on' : '') + '" data-i="' + i + '" aria-label="第 ' + (i + 1) + ' 张"></button>').join('');
+
+    /* 底部加一行"今天从 N 个候选里抽了 10 个"，让"随机"这件事看得见、说得清 */
+    const foot = candTotal > list.length
+      ? '<div class="today__draw">' + candTotal + ' 道中抽 ' + list.length + ' 道，今日不变</div>'
+      : '';
+
+    return bar +
+      '<div class="today">' +
+      '<div class="today__idx" id="tIdx">' + bars + '</div>' +
+      '<div class="today__wheel" id="tWheel">' + cards + '</div>' +
+      foot +
+      '<div class="today__foot">' +
+      '<button type="button" class="t-next">换 一 张</button>' +
+      '<button type="button" class="pick t-pick">就 吃 这 个</button>' +
+      '</div></div>';
+  }
+
+  /* ================================================================
+     11.6b 转盘：圆心在屏幕外下方，卡片排在它的弧线上
+     原来是 overflow-x:auto + scroll-snap 的横向轨道（平移）—— 不是转盘。
+     现在：圆心固定在舞台底部下方 PIVOT px（屏幕外），卡片圆心排在半径 R 的弧上。
+     第 k 张的角度 θ = (k - 当前索引) × STEP，弧上坐标直接算：
+       x = sin(θ) × R,  y = (1 - cos(θ)) × R,  缩放 = cos(θ)
+     正面 θ=0 → 弧顶正中、最大；往两侧 θ 增大 → 往下沉、往里收、变小，
+     正好是转盘边缘"近大远小、沿弧散开"的样子。
+     不用 rotate 绕外圆心凑位移：那会让卡片整体偏向一侧，弧不对称。
+     ================================================================ */
+  /* 弧半径固定；步距在 bindToday 里按 360/n 算 —— 卡片必须正好铺满整圈。
+     之前用固定 26°：10 张只铺了 260°，圆环上空着 100° 的缺口；
+     转起来缺口转进可视窗时弧上只剩 1~2 张（实测掉到 1 张）——
+     就是"看着断掉、绕不回环"的样子。360/n（n=10 → 36°）无缝铺满、左右对称，
+     且 period = 360/STEP = n 正好是整数，转圈落位几何完全重合、零跳变。 */
+  const WHEEL = { radius: 400 };
+
+  function bindToday(rec) {
+    const el = rec.el;
+    const wheel = el.querySelector('#tWheel');
+    if (!wheel) return;
+    const bars = [...el.querySelectorAll('#tIdx button')];
+    const cards = [...wheel.querySelectorAll('.card')];
+    const meta = el.querySelector('.page__meta');
+    const n = cards.length;
+    if (!n) return;
+    rec.idx = 0;
+    const STEP = 360 / n;                /* 铺满整圈：n 步 = 360°，循环无缝 */
+
+    /* 转圈动画的"作废铃"：点索引条 / 键盘 / 拖拽都是新的切换意图，
+       bump 令牌让正在跑的 spin() 下一帧立刻让位并清干净状态。
+       不这么做的话，动画会反手把用户的点击覆盖掉 —— 看起来就是
+       "点了第 6 根条却停在别人身上"（吞点击）。 */
+    let spinToken = 0;
+    let lastPlaced = 0;                  /* 卡片当前真实摆到的连续位置（转圈中是小数） */
+    function takeOver() {
+      spinToken++;
+      if (next) next._busy = false;
+      wheel.classList.remove('spin');
+    }
+
+  /* 弧上坐标：θ 相对当前索引。正面那张 θ=0，落在弧顶正中。
+     y 用 (1-cosθ)·R 表示"沉下去多少"——圆心在下方，弧顶在圆心正上方，
+     所以 θ 越大越往圆心方向（屏幕下方）沉。
+     注意 idx 可以是小数（转圈动画用）：θ 连续变化，卡片就是沿弧滑过去的。 */
+    function place(idx, dragDeg) {
+      const base = dragDeg || 0;
+      lastPlaced = idx;                  /* 记住真实位置：拖拽接管转圈时从这里接着摆，零跳变 */
+      const R = WHEEL.radius;
+      cards.forEach((c, i) => {
+        /* θ 允许超过一圈：转圈动画传进来的 idx 是连续小数，
+           这里按 (i - idx) 直接算，转过去自然就是沿弧滑到背面再回来。 */
+        const th = ((i - idx) * STEP + base) * Math.PI / 180;
+        /* 转圈时 θ 会一路涨到 20π 以上：浮点误差会让 sin/cos 抖动（就是"抽风"）。
+           每帧先收回到 [-π, π]，三角函数才稳。 */
+        const a = Math.atan2(Math.sin(th), Math.cos(th));
+        const x = Math.sin(a) * R;
+        const y = (1 - Math.cos(a)) * R;
+        const s = Math.max(0.35, Math.cos(a));
+        /* 越靠边越歪：给一点 rotate 让卡片"贴"在弧的切线上 */
+        const tilt = a * 180 / Math.PI * 0.55;
+        c.style.transform =
+          'translate(-50%,-50%) translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)' +
+          ' scale(' + s.toFixed(3) + ') rotate(' + tilt.toFixed(2) + 'deg)';
+        /* 淡出窗 ±75°：36° 步距下正好露出正面 + 左右各 2 = 5 张，
+           且左右对称（以前 66° 窗配 26° 步距，左半边是 100° 缺口，没有卡） */
+        const off = Math.abs(a) > 1.31;
+        c.classList.toggle('is-mid', !off && Math.abs(a) > 0.02);
+        c.classList.toggle('is-off', off);
+        c.style.pointerEvents = off ? 'none' : '';
+        /* 层级按角度：正面唯一最高，越靠后越低。
+           以前按 |x| 算，正面和背面（θ=180°，x 都 ≈0）会并列 100，层级就乱了 */
+        c.style.zIndex = String(100 - Math.round(Math.abs(a) * 180 / Math.PI / 2));
+      });
+    }
+
+    const sync = () => {
+      const i = Math.max(0, Math.min(n - 1, rec.idx));
+      rec.idx = i;
+      bars.forEach((b, k) => b.classList.toggle('on', k === i));
+      if (meta) meta.textContent = '第 ' + pad(i + 1) + ' / ' + pad(n);
+      place(i, 0);
+    };
+
+    /* ---- 点索引条（转圈中点 = 立即接管，按你点的落） ---- */
+    bars.forEach((b, i) => b.addEventListener('click', () => { takeOver(); rec.idx = i; sync(); }));
+
+    /* ---- 换一张：转满整圈后随机落一张 ---- */
+    const next = el.querySelector('.t-next');
+    if (next) next.addEventListener('click', () => {
+      if (next._busy) return;
+      next._busy = true;
+      wheel.classList.add('spin');          /* 关掉 CSS 过渡：JS 每帧已插值，否则 .6s 过渡再平滑一遍 = 抽风 */
+      let target = Math.floor(Math.random() * n);
+      if (target === rec.idx) target = (target + 1) % n;   /* 别原地不动 */
+      const start = rec.idx;
+      /* 关键：终点必须与 target 卡的几何完全重合，否则最后一帧和 sync()
+         差出大半圈，同一张卡瞬间被拍过去 ~400px —— 那就是之前"抽风"的真凶。
+         步距 360/n 后 period = 360/STEP = n 正好整数：终点 = target + m·n，
+         几何与 target 完全重合，落位零跳变；m 取最小满足"至少转满一圈"。 */
+      const period = 360 / STEP;                       /* = n（36° × 10 = 360°） */
+      const forward = target - start;
+      const m = Math.max(1, Math.ceil(1 - forward / period));
+      const total = m * period + forward;              /* 总步数：至少转满一圈，且终点 ≡ target */
+      /* 一步 ≈ 120ms（36° 步距比 26° 大，同样圈数要走得更快才跟得上），
+         sine 缓动峰值速度只有三次缓动一半 → 弧顶峰值帧位移 ~55px */
+      const dur = Math.max(1700, total * 120);
+      const t0 = performance.now();
+      const gen = spinToken;              /* 记下"我这代"的令牌 */
+      (function spin() {
+        if (gen !== spinToken) return;    /* 被点条/键盘/拖拽接管了：对方已摆好位，我直接退场 */
+        const k = Math.min(1, (performance.now() - t0) / dur);
+        /* sine 缓入缓出：起步不猛冲、落位不急停，全程单调（不会来回） */
+        const e = (1 - Math.cos(Math.PI * k)) / 2;
+        const cur = start + total * e;
+        /* 高亮 = 真正在弧顶那张（折回角度最接近 0 的）。
+           cur 是连续小数、也会超过一圈，逐张算折回角度取最小才对得准。 */
+        let fi = 0, fb = Infinity;
+        for (let j = 0; j < n; j++) {
+          const a = Math.abs(Math.atan2(
+            Math.sin((j - cur) * STEP * Math.PI / 180),
+            Math.cos((j - cur) * STEP * Math.PI / 180)));
+          if (a < fb) { fb = a; fi = j; }
+        }
+        rec.idx = fi;
+        place(cur, 0);
+        bars.forEach((b, j) => b.classList.toggle('on', j === fi));
+        if (meta) meta.textContent = '第 ' + pad(fi + 1) + ' / ' + pad(n);
+        if (k < 1) requestAnimationFrame(spin);
+        else {
+          /* 终点几何 ≡ target：sync() 换算整数索引时零跳变 */
+          rec.idx = target % n;
+          sync();
+          wheel.classList.remove('spin');
+          next._busy = false;
+        }
+      })();
+    });
+
+    /* ---- 就吃这个 ---- */
+    const pick = el.querySelector('.t-pick');
+    if (pick) pick.addEventListener('click', () => {
+      const card = cards[rec.idx];
+      if (!card) return;
+      const r = findRec(card.dataset.id);
+      if (!r) return;
+      todayEaten.add(r.eat);
+      card.classList.add('today');
+      showToast('已记下：今天吃 <b>' + esc(r.eat) + '</b>', null, 2600);
+    });
+
+    /* ---- 拖：横向拖动 = 整排卡片绕外圆心摆，纵向留给页面滚动 ---- */
+    let drag = null;
+    wheel.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, base: lastPlaced };
+      wheel.classList.add('drag');
+      wheel.setPointerCapture && wheel.setPointerCapture(e.pointerId);
+    });
+    wheel.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      drag.dx = e.clientX - drag.x;
+      drag.dy = e.clientY - drag.y;
+      /* 明显是竖划就放弃拖拽，让页面正常滚 */
+      if (Math.abs(drag.dy) > 10 && Math.abs(drag.dy) > Math.abs(drag.dx)) { endDrag(true); return; }
+      if (Math.abs(drag.dx) > 4) { if (!drag.moved) takeOver(); drag.moved = true; }   /* 真拖起来 = 接管转圈 */
+      /* 往左拖（dx<0）→ 摆向下一张（角度变正），跟手方向与弧线一致。
+         基准用 pointerdown 时刻的真实位置 drag.base（转圈中是小数）——
+         用 rec.idx 会从"转圈半路"瞬移到"最接近的整数张"，一上手就跳 */
+      place(drag.base, (drag.dx / 300) * STEP * 1.4);
+    });
+    function endDrag(cancel) {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      wheel.classList.remove('drag');
+      /* 没真拖动（点一下、或纯竖划）：转圈还在跑就别去碰它；
+         没转圈才弹回整数位（清掉微小的拖拽偏移） */
+      if (!d.moved) { if (!wheel.classList.contains('spin')) sync(); return; }
+      if (cancel) { sync(); return; }
+      /* 换算成"摆几张"：拖过 28% 步距算一张，不足弹回原位 */
+      const frac = -d.dx / 300;
+      let go = Math.round(frac * 1.4);
+      if (Math.abs(frac) < 0.2) go = 0;
+      else if (go === 0) go = frac > 0 ? 1 : -1;
+      rec.idx = ((rec.idx + go) % n + n) % n;
+      sync();
+    }
+    wheel.addEventListener('pointerup', () => endDrag(false));
+    wheel.addEventListener('pointercancel', () => endDrag(true));
+    /* 拖完别让卡片把 click 也吞了 */
+    wheel.addEventListener('click', (e) => {
+      if (e.target.closest('.card')) e.stopPropagation();
+    }, true);
+
+    /* ---- 键盘：左右方向键摆 ---- */
+    wheel.tabIndex = 0;
+    wheel.setAttribute('role', 'group');
+    wheel.setAttribute('aria-label', '今日推荐，左右方向键切换');
+    wheel.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { takeOver(); rec.idx = (rec.idx - 1 + n) % n; sync(); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { takeOver(); rec.idx = (rec.idx + 1) % n; sync(); e.preventDefault(); }
+    });
+
+    sync();
+  }
+
+  function citiesHTML() {
+    const map = new Map();
+    pool.forEach((r) => {
+      const key = r.city || '';
+      if (!map.has(key)) map.set(key, { city: r.city, list: [] });
+      map.get(key).list.push(r);
+    });
+    const rows = [...map.values()].map((o) => ({
+      city: o.city,
+      count: o.list.length,
+      avg: o.list.reduce((s, r) => s + r.rating, 0) / o.list.length,
+      top: o.list.slice().sort((a, b) => b.at.localeCompare(a.at))[0]
+    }));
+
+    /* 分组：首字母 → 该字母下的城市。组内仍按"道数多 → 分高"排，
+       所以字母轨给的是"去哪一区"，组内顺序保留原来的价值排序。 */
+    const groups = [];
+    const gmap = new Map();
+    rows.forEach((r) => {
+      const key = initialOf(r.city);
+      if (!gmap.has(key)) { const g = { letter: key, rows: [] }; gmap.set(key, g); groups.push(g); }
+      gmap.get(key).rows.push(r);
+    });
+    groups.forEach((g) => g.rows.sort((a, b) =>
+      b.count - a.count || b.avg - a.avg || String(a.city).localeCompare(String(b.city), 'zh-Hans-CN')));
+    groups.sort((a, b) => {
+      if (a.letter !== b.letter) {
+        if (a.letter === '#') return 1;
+        if (b.letter === '#') return -1;
+        return a.letter < b.letter ? -1 : 1;
+      }
+      return 0;
+    });
+
+    const body = groups.map((g) =>
+      '<section class="city-group" data-letter="' + g.letter + '">' +
+      '<div class="city-group__h"><b>' + g.letter + '</b><i>' + g.rows.length + ' 座</i></div>' +
+      g.rows.map((r) =>
+        '<button class="city-row" type="button" data-city="' + esc(r.city || '') + '">' +
+        '<span class="city-row__top"><span class="city-row__name">' + (r.city ? esc(r.city) : '未记城市') + '</span>' +
+        '<span class="city-row__num">' + r.count + ' 道，' + r.avg.toFixed(1) + ' 分 <span class="city-row__chev" aria-hidden="true">›</span></span></span>' +
+        '<span class="city-row__sub">最近 ' + esc(r.top.eat) + (r.top.shop ? ' ' + esc(r.top.shop) : '') + '，' + mmdd(r.top.at) + '</span>' +
+        '</button>').join('') +
+      '</section>').join('');
+
+    return '' +
+      '<div class="page__bar"><button class="pback" data-back type="button" aria-label="返回">←</button>' +
+      '<span class="page__title">足迹</span><span class="page__meta">' + rows.length + ' 地，' + pool.length + ' 笔</span></div>' +
+      '<div class="page__body">' +
+      '<div class="city-groups">' + body +
+      (rows.length ? '' : '<div class="page-empty">还没有记录。</div>') +
+      '<div class="footnote">演示数据：12 条真实记录，其余为程序生成</div>' +
+      '</div>' +
+      '</div>' +
+      /* 右侧字母轨：只放出现过的字母，点字母跳组。
+         轨必须在滚动容器**外面**（.page 的直接子元素）——放进 page__body 里它会跟着内容滚走，
+         翻两屏就看不见了，索引也就废了。 */
+      '<nav class="city-rail" aria-label="城市首字母索引">' +
+      groups.map((g) => '<b role="button" tabindex="0" data-goto="' + g.letter + '" aria-label="跳到 ' + g.letter + ' 组">' + g.letter + '</b>').join('') +
+      '<span class="city-rail__tip" id="cityTip" aria-hidden="true"></span>' +
+      '</nav>';
+  }
+
+  /* 足迹页的字母索引轨：点字母（或键盘）跳到对应分组，
+     滚动时同步高亮当前所在组。写在自己的 scroll 监听里，不干扰墙的 rAF 合并。 */
+  function bindCitiesIndex(rec) {
+    const el = rec.el;
+    const body = el.querySelector('.page__body');
+    const rail = el.querySelector('.city-rail');
+    const tip = el.querySelector('.city-rail__tip');
+    if (!body || !rail) return;
+    const keys = [...rail.querySelectorAll('[data-goto]')];
+    const secs = [...el.querySelectorAll('.city-group')];
+    let tipTimer = 0;
+
+    /* 分组在 body 坐标系里的位置：offsetTop 是相对最近定位祖先（.page__body，已 position:relative） */
+    const topOf = (sec) => sec.offsetTop - body.clientTop;
+
+    function jump(letter) {
+      const sec = secs.find((s) => s.dataset.letter === letter);
+      if (!sec) return;
+      /* 最后一组常常短于视口，scrollTo 到 offsetTop 会被浏览器钳到 maxScroll，
+         看起来就是"没跳到底"。这里按 maxScroll 钳一次，和浏览器行为一致但结果可预期。 */
+      const max = body.scrollHeight - body.clientHeight;
+      body.scrollTop = Math.max(0, Math.min(topOf(sec), max));
+      if (tip) {
+        tip.textContent = letter;
+        tip.classList.add('on');
+        clearTimeout(tipTimer);
+        tipTimer = setTimeout(() => tip.classList.remove('on'), 700);
+      }
+    }
+
+    keys.forEach((k) => {
+      const go = (e) => { e.preventDefault(); e.stopPropagation(); jump(k.dataset.goto); };
+      k.addEventListener('click', go);
+      k.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
+    });
+
+    /* 滚到哪一组，就把哪个字母点亮 —— 让轨同时是个"你在哪儿"的指示器 */
+    let raf = 0;
+    body.addEventListener('scroll', () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const limit = body.scrollTop + 56;
+        let cur = '';
+        for (const s of secs) if (topOf(s) <= limit) cur = s.dataset.letter;
+        keys.forEach((k) => k.classList.toggle('on', k.dataset.goto === cur));
+      });
+    }, { passive: true });
+  }
+
+  function cityHTML(city) {
+    const label = city ? city : '未记城市';
+    const list = pool.filter((r) => (r.city || '') === (city || '')).sort(SORTS[state.sort]);
+    const avg = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
+
+    const shopMap = new Map();
+    list.forEach((r) => {
+      if (!r.shop) return;
+      if (!shopMap.has(r.shop)) shopMap.set(r.shop, []);
+      shopMap.get(r.shop).push(r);
+    });
+    const shops = [...shopMap.entries()].sort((a, b) => b[1].length - a[1].length);
+
+    return '' +
+      '<div class="page__bar"><button class="pback" data-back type="button" aria-label="返回">←</button>' +
+      '<span class="page__title">' + esc(label) + '</span>' +
+      '<span class="page__meta">' + list.length + ' 道</span></div>' +
+      '<div class="page__body" data-citywall><div class="wall"></div>' +
+      (shops.length
+        ? '<div class="clist">' +
+          '<div class="clist__h">在这座城市吃过的店</div>' +
+          shops.map(([name, arr]) =>
+            '<button class="dish-row" type="button" data-shop="' + esc(name) + '">' +
+            '<span class="dish-row__name">' + esc(name) + '</span>' +
+            '<span class="dish-row__date">' + arr.length + ' 道 ›</span></button>').join('') +
+          '</div>'
+        : '') +
+      '<div class="page-foot">' + esc(label) + '，' + list.length + ' 道，均分 ' + avg.toFixed(1) + '</div></div>';
+  }
+
+  function shopHTML(shop) {
+    const list = pool.filter((r) => r.shop === shop).sort((a, b) => b.at.localeCompare(a.at));
+    const dishes = new Set(list.map((r) => r.eat));
+    const avg = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
+    const city = (list.find((r) => r.city) || {}).city || '';
+
+    return '' +
+      '<div class="page__bar"><button class="pback" data-back type="button" aria-label="返回">←</button>' +
+      '<span class="page__title">一家店</span><span class="page__meta">' + esc(city) + '</span></div>' +
+      '<div class="page__body">' +
+      '<div class="shop-head"><h1 class="shop-head__name">' + esc(shop) + '</h1>' +
+      '<p class="shop-head__sub">' + esc([city, (list.find((r) => r.district) || {}).district].filter(Boolean).join(' ') || '未记城市') + '</p></div>' +
+      '<div class="stats">' +
+      '<div class="stat"><b>' + list.length + '</b><span>去过几次</span></div>' +
+      '<div class="stat"><b>' + dishes.size + '</b><span>点过几道</span></div>' +
+      '<div class="stat"><b>' + avg.toFixed(1) + '</b><span>均分</span></div>' +
+      '</div>' +
+      list.map((r) => '' +
+        '<button class="dish-row" type="button" data-open="' + r.id + '">' +
+        '<span class="dish-row__name">' + esc(r.eat) + '</span>' +
+        '<span class="dish-row__stars">' + marks(r.rating) + '</span>' +
+        '<span class="dish-row__date">' + dateOf(r.at) + '</span>' +
+        '</button>'
+      ).join('') +
+      '<div class="footnote">演示数据：12 条真实记录，其余为程序生成</div>' +
+      '</div>';
+  }
+
+  $('btnCities').addEventListener('click', () => pushPage('cities', {}));
+  $('btnRank').addEventListener('click', () => pushPage('rank', {}));
+  $('btnToday').addEventListener('click', () => pushPage('today', {}));
+
+  /* ================================================================
+     12. 详情
+     ================================================================ */
+  let currentId = null;
+  let lastFocus = null;
+
+  function findRec(id) { return pool.find((r) => r.id === id) || null; }
+
+  function openDetail(id) {
+    if (performance.now() < pushLock) return;   /* 页面还在滑入：穿透点击不掀层，与 push 同一把锁（连点只进一层） */
+    const r = findRec(id);
+    if (!r) return;
+    currentId = id;
+    lastFocus = document.activeElement;
+
+    dghost.textContent = Array.from(r.eat)[0] || '';
+    dname.textContent = r.eat;
+    dshop.textContent = placeOf(r);
+    ddate.textContent = weekday(r.at) + ' ' + timeOf(r.at);
+    dplate.dataset.tone = r.tone;
+    dno.textContent = mmdd(r.at);
+    drate.innerHTML = marks(r.rating);
+    dstars.innerHTML = marks(r.rating) + '<b>' + (r.rating ? r.rating + ' 分' : '未评') + '</b>';
+    dnote.textContent = r.note || '没有留下备注。';
+    dnote.classList.toggle('is-empty', !r.note);
+    dcount.textContent = dateOf(r.at);
+    renderRelated(r);
+
+    dbody.scrollTop = 0;
+    detail.classList.add('in');
+    toLatest.classList.remove('on');
+    setTimeout(() => detail.focus({ preventScroll: true }), 260);
+  }
+
+  function renderRelated(r) {
+    const out = [];
+
+    if (r.shop) {
+      const others = pool.filter((x) => x.shop === r.shop && x.id !== r.id)
+        .sort((a, b) => b.at.localeCompare(a.at));
+      out.push(
+        '<div class="drel">' +
+        '<button class="drel__h" type="button" data-shop-page="' + esc(r.shop) + '">' +
+        '<span class="k">同一家店</span><span class="v">' + esc(r.shop) + '</span>' +
+        '<span class="n">' + (others.length + 1) + ' 次</span><span class="c">›</span></button>' +
+        (others.length
+          ? '<div class="drel__list">' + others.slice(0, 6).map((x) =>
+              '<button class="drel__chip" type="button" data-open="' + x.id + '">' + esc(x.eat) + '</button>').join('') +
+            (others.length > 6 ? '<span class="drel__none">还有 ' + (others.length - 6) + ' 道</span>' : '') + '</div>'
+          : '<div class="drel__none">这家店只有这一道。</div>') +
+        '</div>'
+      );
+    } else {
+      out.push('<div class="drel"><div class="drel__none" style="padding:10px 0">这笔没记店名。</div></div>');
+    }
+
+    if (r.city) {
+      const others = pool.filter((x) => x.city === r.city && x.id !== r.id)
+        .sort((a, b) => b.at.localeCompare(a.at));
+      out.push(
+        '<div class="drel">' +
+        '<button class="drel__h" type="button" data-city-page="' + esc(r.city) + '">' +
+        '<span class="k">同一城市</span><span class="v">' + esc(r.city) + '</span>' +
+        '<span class="n">共 ' + (others.length + 1) + ' 道</span><span class="c">›</span></button>' +
+        (others.length
+          ? '<div class="drel__list">' + others.slice(0, 6).map((x) =>
+              '<button class="drel__chip" type="button" data-open="' + x.id + '">' + esc(x.eat) + '</button>').join('') +
+            (others.length > 6 ? '<span class="drel__none">还有 ' + (others.length - 6) + ' 道</span>' : '') + '</div>'
+          : '<div class="drel__none">这座城市只有这一道。</div>') +
+        '</div>'
+      );
+    } else {
+      out.push('<div class="drel"><div class="drel__none" style="padding:10px 0">这笔没记城市。</div></div>');
+    }
+
+    drelWrap.innerHTML = out.join('');
+    drelWrap.querySelectorAll('[data-open]').forEach((b) => {
+      b.addEventListener('click', () => openDetail(b.dataset.open));
+    });
+    drelWrap.querySelectorAll('[data-shop-page]').forEach((b) => {
+      b.addEventListener('click', () => { closeDetail(); pushPage('shop', { shop: b.dataset.shopPage }); });
+    });
+    drelWrap.querySelectorAll('[data-city-page]').forEach((b) => {
+      b.addEventListener('click', () => { closeDetail(); pushPage('city', { city: b.dataset.cityPage }); });
+    });
+  }
+
+  function closeDetail() {
+    if (!detail.classList.contains('in')) return;
+    detail.classList.remove('in');
+    currentId = null;
+    updateToLatest();
+    if (lastFocus && lastFocus.focus) setTimeout(() => lastFocus.focus({ preventScroll: true }), 60);
+  }
+  dback.addEventListener('click', closeDetail);
+
+  dEdit.addEventListener('click', () => {
+    const r = findRec(currentId);
+    if (r) openForm(r);
+  });
+  dDel.addEventListener('click', () => {
+    const r = findRec(currentId);
+    if (!r) return;
+    closeDetail();
+    doDelete(r);
+  });
+
+  /* ================================================================
+     13. 删除 / 撤销
+     ================================================================ */
+  function doDelete(r) {
+    undoIndex = pool.findIndex((x) => x.id === r.id);
+    undoRecord = r;
+    pool = pool.filter((x) => x.id !== r.id);
+    home.setList(ordered(), false);
+    updateChrome();
+    if (pages.length) replaceTopPage();
+    if (search.classList.contains('in')) runSearch();
+    showToast('已删除 <b>' + esc(r.eat) + '</b>', () => {
+      if (!undoRecord) return;
+      pool.splice(Math.min(undoIndex, pool.length), 0, undoRecord);
+      undoRecord = null;
+      home.setList(ordered(), true);
+      updateChrome();
+      if (pages.length) replaceTopPage();
+      if (search.classList.contains('in')) runSearch();
+      hideToast();
+    });
+  }
+
+  function showToast(html, onUndo, ms) {
+    clearTimeout(toastTimer);
+    toastT.innerHTML = html;
+    toastUndo.style.display = onUndo ? '' : 'none';
+    toast.classList.remove('on');
+    void toast.offsetWidth;
+    toast.classList.add('on');
+    toastUndo.onclick = () => { if (onUndo) onUndo(); };
+    toastTimer = setTimeout(() => { hideToast(); undoRecord = null; }, ms || 5000);
+  }
+  function hideToast() {
+    toast.classList.remove('on');
+    clearTimeout(toastTimer);
+  }
+
+  /* ================================================================
+     14. 表单（贴一张 / 编辑）
+     ================================================================ */
+  let editingId = null;
+  let formRating = 0;
+
+  function shopHistory() {
+    const seen = new Set();
+    const out = [];
+    pool.slice().sort((a, b) => b.at.localeCompare(a.at)).forEach((r) => {
+      if (r.shop && !seen.has(r.shop)) { seen.add(r.shop); out.push(r.shop); }
+    });
+    return out;
+  }
+  function cityHistory() {
+    const seen = new Set();
+    const out = [];
+    pool.slice().sort((a, b) => b.at.localeCompare(a.at)).forEach((r) => {
+      if (r.city && !seen.has(r.city)) { seen.add(r.city); out.push(r.city); }
+    });
+    return out;
+  }
+  function districtHistory(city) {
+    const seen = new Set();
+    const out = [];
+    pool.forEach((r) => {
+      if (r.city === city && r.district && !seen.has(r.district)) { seen.add(r.district); out.push(r.district); }
+    });
+    return out;
+  }
+
+  function renderSug(box, items, onPick, limit) {
+    const max = limit || 6;
+    box.innerHTML = items.slice(0, max).map((t, i) =>
+      '<button class="sg" type="button" data-i="' + i + '">' + esc(t) + '</button>').join('');
+    box.querySelectorAll('.sg').forEach((b) => {
+      b.addEventListener('click', (e) => { e.preventDefault(); onPick(items[Number(b.dataset.i)]); });
+    });
+  }
+
+  function openForm(rec) {
+    if (performance.now() < pushLock) return;   /* 同 openDetail：滑入过场中的穿透点击不开表单 */
+    editingId = rec ? rec.id : null;
+    fTitle.textContent = rec ? '编辑这一笔' : '贴一张';
+    fSubmit.textContent = rec ? '存 下 来' : '贴 上 去';
+
+    fEat.value = rec ? rec.eat : '';
+    fShop.value = rec && rec.shop ? rec.shop : '';
+    fCity.value = rec && rec.city ? rec.city : '';
+    fDistrict.value = rec && rec.district ? rec.district : '';
+    fAt.value = toInputValue(rec ? rec.at : stampNow());
+    fNote.value = rec && rec.note ? rec.note : '';
+    formRating = rec ? rec.rating : 0;
+    syncFormStars();
+    fEatField.classList.remove('bad');
+
+    refreshShopSug();
+    refreshCitySug();
+    refreshDistrictSug();
+
+    form.classList.add('in');
+    toLatest.classList.remove('on');
+    setTimeout(() => { if (!rec) fEat.focus({ preventScroll: true }); }, 300);
+  }
+
+  function closeForm() {
+    form.classList.remove('in');
+    editingId = null;
+    updateToLatest();
+  }
+
+  function syncFormStars() {
+    fStars.querySelectorAll('.star').forEach((s) => {
+      const v = Number(s.dataset.v);
+      s.classList.toggle('on', v <= formRating);
+      s.setAttribute('aria-checked', String(v === formRating));
+    });
+    /* 让 CSS 按当前选中的分数给填充上色（色阶与展示端同一套） */
+    fStars.dataset.pick = String(formRating || 0);
+    fStarLabel.textContent = formRating ? formRating + ' 星' : '未评';
+  }
+
+  function refreshShopSug() {
+    const q = fShop.value.trim();
+    const all = shopHistory();
+    let items = q ? all.filter((s) => s.includes(q) && s !== q) : all;
+    if (!items.length && q) items = all.filter((s) => s !== q);
+    renderSug(fShopSug, items, (v) => { fShop.value = v; refreshShopSug(); }, 5);
+  }
+  function refreshCitySug() {
+    const q = fCity.value.trim();
+    const all = cityHistory();
+    let items = q ? all.filter((s) => s.includes(q) && s !== q) : all;
+    if (!items.length && q) items = all.filter((s) => s !== q);
+    renderSug(fCitySug, items, (v) => {
+      fCity.value = v;
+      if (!districtHistory(v).includes(fDistrict.value)) fDistrict.value = '';
+      refreshCitySug(); refreshDistrictSug();
+    }, 6);
+  }
+  function refreshDistrictSug() {
+    const city = fCity.value.trim();
+    if (!city) { fDistrictSug.innerHTML = ''; fDistrict.disabled = true; return; }
+    fDistrict.disabled = false;
+    const q = fDistrict.value.trim();
+    const all = districtHistory(city);
+    let items = q ? all.filter((s) => s.includes(q) && s !== q) : all;
+    if (!items.length && q) items = all.filter((s) => s !== q);
+    renderSug(fDistrictSug, items, (v) => { fDistrict.value = v; refreshDistrictSug(); }, 5);
+  }
+
+  fStars.addEventListener('click', (e) => {
+    const s = e.target.closest('.star');
+    if (!s) return;
+    formRating = Number(s.dataset.v);
+    syncFormStars();
+  });
+  fShop.addEventListener('input', refreshShopSug);
+  fCity.addEventListener('input', () => { refreshCitySug(); refreshDistrictSug(); });
+  fDistrict.addEventListener('input', refreshDistrictSug);
+  fEat.addEventListener('input', () => { if (fEat.value.trim()) fEatField.classList.remove('bad'); });
+  fEat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveForm(); } });
+  fCancel.addEventListener('click', closeForm);
+  fSubmit.addEventListener('click', saveForm);
+
+  function saveForm() {
+    const eat = fEat.value.trim();
+    if (!eat) {
+      fEatField.classList.remove('bad');
+      void fEatField.offsetWidth;
+      fEatField.classList.add('bad');
+      fEat.focus({ preventScroll: true });
+      return;
+    }
+    const data = {
+      eat: Array.from(eat).slice(0, 12).join(''),
+      shop: fShop.value.trim() || null,
+      city: fCity.value.trim() || null,
+      district: (fCity.value.trim() && fDistrict.value.trim()) || null,
+      rating: formRating,
+      at: fromInputValue(fAt.value),
+      note: fNote.value.trim() || null
+    };
+
+    if (editingId) {
+      const r = findRec(editingId);
+      if (r) Object.assign(r, data);
+      closeForm();
+      home.setList(ordered(), false);
+      updateChrome();
+      if (pages.length) replaceTopPage();
+      if (search.classList.contains('in')) runSearch();
+      if (r) openDetail(r.id);
+    } else {
+      const rec = { id: 'u' + Date.now(), span: 'wide', tone: 'paper', ...data };
+      pool.unshift(rec);
+      closeForm();
+      board.scrollTop = 0;
+      home.setList(ordered(), false);
+      updateChrome();
+      if (pages.length) replaceTopPage();
+      if (search.classList.contains('in')) runSearch();
+
+      const node = home.nodes.get(rec.id);
+      const entry = home.byId.get(rec.id);
+      if (entry) board.scrollTop = Math.max(0, entry.y - 30);
+      if (node) {
+        node.el.classList.add('just-added');
+        node.el.animate(
+          [{ opacity: 0, transform: 'scale(1.05)' }, { opacity: 1, transform: 'scale(1)' }],
+          { duration: 420, easing: 'cubic-bezier(.22,.86,.2,1)' }
+        );
+        setTimeout(() => node.el.classList.remove('just-added'), 1600);
+        setTimeout(() => node.el.focus({ preventScroll: true }), 140);
+      }
+      suppressUntil = performance.now() + 400;
+    }
+  }
+
+  $('fab').addEventListener('click', () => openForm(null));
+  $('emptyFab').addEventListener('click', () => openForm(null));
+
+  /* ================================================================
+     15. 搜索
+     ================================================================ */
+  function matches(r, q) {
+    if (!q) return true;
+    return [r.eat, r.shop, r.city, r.district].filter(Boolean).join(' ').toLowerCase().includes(q.toLowerCase());
+  }
+
+  function openSearch() {
+    search.classList.add('in');
+    sInput.value = '';
+    renderSearchSuggest();
+    runSearch();
+    setTimeout(() => sInput.focus({ preventScroll: true }), 300);
+    toLatest.classList.remove('on');
+  }
+  function closeSearch() {
+    search.classList.remove('in');
+    sInput.blur();
+    updateToLatest();
+  }
+
+  function renderSearchSuggest() {
+    const picks = [];
+    ['甜水面', '成都', '马旺子川小馆', '烤鸭'].forEach((p) => picks.push(p));
+    sSuggest.innerHTML =
+      '<p class="sug__h">搜菜名、店、城市、区县</p><div class="sug__list">' +
+      picks.map((p) => '<button class="sug__b" type="button" data-q="' + esc(p) + '">' + esc(p) + '</button>').join('') +
+      '</div>';
+    sSuggest.querySelectorAll('[data-q]').forEach((b) => {
+      b.addEventListener('click', () => { sInput.value = b.dataset.q; runSearch(); sInput.focus(); });
+    });
+  }
+
+  function runSearch() {
+    const q = sInput.value.trim();
+    const list = pool.filter((r) => matches(r, q)).sort(SORTS[state.sort]);
+
+    if (!q) {
+      searchWall.setList([], false);
+      sHits.textContent = '';
+      sToWall.style.display = 'none';
+      sSuggest.style.display = '';
+      sEmpty.style.display = 'none';
+      swall.style.display = 'none';
+      $('sEnd').textContent = '';
+      return;
+    }
+
+    sSuggest.style.display = 'none';
+    swall.style.display = '';
+    sHits.textContent = '「' + q + '」命中 ' + list.length + ' 笔';
+    sToWall.style.display = 'inline';
+    searchWall.setList(list, false);
+    $('sEnd').textContent = list.length ? '— 共 ' + list.length + ' 笔 —' : '';
+
+    if (!list.length) {
+      sEmpty.style.display = 'block';
+      $('sEmptyT').textContent = '没找到「' + q + '」。';
+      swall.style.display = 'none';
+    } else {
+      sEmpty.style.display = 'none';
+    }
+  }
+
+  sInput.addEventListener('input', runSearch);
+  sClear.addEventListener('click', () => {
+    if (sInput.value) { sInput.value = ''; runSearch(); sInput.focus(); }
+    else closeSearch();
+  });
+  sBack.addEventListener('click', closeSearch);
+  sToWall.addEventListener('click', () => { sInput.value = ''; runSearch(); closeSearch(); });
+  $('sEmptyB').addEventListener('click', () => { sInput.value = ''; runSearch(); sInput.focus(); });
+  $('btnSearch').addEventListener('click', openSearch);
+
+  /* ================================================================
+     16. 键盘
+     ================================================================ */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (form.classList.contains('in')) { closeForm(); return; }
+    if (toast.classList.contains('on')) { hideToast(); return; }
+    if (detail.classList.contains('in')) { closeDetail(); return; }
+    if (search.classList.contains('in')) { closeSearch(); return; }
+    if (pages.length) { popPage(); return; }
+  });
+
+  /* ================================================================
+     17. 起步
+     ================================================================ */
+  home.setList(ordered(), false);
+  updateChrome();
+  updateToLatest();
+})();
+</script>
+</body>
+</html>
+
+
+
+
+

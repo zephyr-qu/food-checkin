@@ -1,0 +1,970 @@
+/* 设计层样式的最终固化副本。
+   WXSS 不支持属性选择器/带参数伪类/部分标签选择器与浏览器专属伪类。
+   base 在前、matcha 在后：同特异性下靠后加载者胜。
+   注意：本文件是提交进仓库的最终产物。历史上由一次性转换脚本从原型样式
+   （base.css / variant-matcha.css）转换而来；原型目录与转换脚本均已不在工作区，
+   后续样式调整请直接改本文件，不要再期望重新生成。 */
+/* ==========================================================================
+   美食打卡 v2 · 共享层
+   只做两件事：**结构 / 布局** 与 **全部 token 的默认值**。不含任何一方的材质。
+
+   为什么不继承 v1 的 styles.css / variant-sticker.css：
+   那两个文件铺的是「贴纸拼贴」整套材质（6px 模切白边、随机倾斜、拍立得框、胶囊按钮），
+   v2 的两个方向（手账 / 夜市灯箱）都不用。继承会漏掉碎片，所以从零写一份共享层，
+   只保留 DOM 契约与结构布局。
+
+   三条硬规矩（v1 踩过的坑，在这里收成 token）：
+   1. **本文件不许出现任何写死的颜色**。v1 里写死的三处 hover `#e7ebee`、dock 渐变末端
+      `rgba(238,240,241,0)`、禁用态 `#c9ced3`、冷影 `rgba(16,20,24,…)`、冷描边
+      `rgba(35,39,42,…)`、删除按钮 `#b3372b`，现在全部是 token：
+      --hover / --dock-fade / --btn-disabled* / --shadow-* / --line / --rule / --danger。
+   2. `.fp-app::after` 只有一件事：渲染 `--texture`。横线纸纹与顶部光晕都由两个方向文件提供，
+      **不新增任何 DOM 元素**。
+   3. 方向文件用**精确匹配** `.fp-app[data-variant="journal"]`（特异性 0,2,0），
+      永远高于本文件的 `.fp-app`（0,1,0），不会出现 v1 那种「同特异性靠加载顺序决定胜负」
+      的静默覆盖。
+
+   方向文件负责：--paper / --paper-2 / --ink* / --line / --rule / --accent* / --sun* /
+   --select* / --tint-a / --radius* / --font-* / --shadow-* / --texture* / --color-scheme /
+   --star* / --hover / --dock-fade / --btn-disabled* / --danger。
+   默认值是**中性兜底**：任何一方漏掉 token 都不会静默继承到另一方的颜色。
+   ========================================================================== */
+/* #ifdef weapp */
+page { --canvas: #e9ebec; --ui-panel: rgba(24, 20, 16, .92); --ui-panel-ink: #f4f0ea; --ui-panel-line: rgba(255, 255, 255, .24); --ui-panel-hover: rgba(255, 255, 255, .1); --ui-shadow: 0 8px 22px rgba(0, 0, 0, .3); --brief-bg: #ffffff; --brief-ink: #1a1a1a; --brief-strong: #111111; --brief-muted: rgba(0, 0, 0, .66); --brief-line: rgba(0, 0, 0, .1); --brief-code: rgba(0, 0, 0, .06); }
+/* #endif */
+/* #ifndef weapp */
+:root { --canvas: #e9ebec; --ui-panel: rgba(24, 20, 16, .92); --ui-panel-ink: #f4f0ea; --ui-panel-line: rgba(255, 255, 255, .24); --ui-panel-hover: rgba(255, 255, 255, .1); --ui-shadow: 0 8px 22px rgba(0, 0, 0, .3); --brief-bg: #ffffff; --brief-ink: #1a1a1a; --brief-strong: #111111; --brief-muted: rgba(0, 0, 0, .66); --brief-line: rgba(0, 0, 0, .1); --brief-code: rgba(0, 0, 0, .06); }
+/* #endif */
+/* ---------------------------------------------------------------- 基础 */
+/* #ifdef weapp */
+page, view, text, image, input, textarea, button { box-sizing: border-box; }
+/* #endif */
+/* #ifndef weapp */
+* { box-sizing: border-box; }
+/* #endif */
+html, body { margin: 0; height: 100%; background: var(--canvas); }
+#root { min-height: 100%; }
+/* H5 挂载点是 index.html 的 <div id="app">（Taro H5 默认 appId 就是 'app'），
+   不是 #root —— 原型那条 #root 规则从来没生效过。
+   归属一次性转换脚本的 EXTRA 段（已随工作区清理删除）。 */
+#app { min-height: 100%; }
+.fp-btn { font: inherit; color: inherit; border: 0; background: none; }
+view { margin: 0; padding: 0; }
+view { margin: 0; }
+/* ------------------------------------------------------------- App 外壳 */
+.fp-app { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; display: flex; flex-direction: column; --pad: 18px; --radius: 10px; --radius-lg: 12px; --radius-chip: 999px; --radius-btn: 10px; --radius-thumb: 10px; --font-display: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; --font-body: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; --font-num: ui-monospace, "SF Mono", Menlo, monospace; --paper: #f2f2f0; --paper-2: #ffffff; --ink: #1a1a1a; --ink-soft: rgba(26, 26, 26, .72); --ink-faint: rgba(26, 26, 26, .62); --icon-faint: rgba(26, 26, 26, .55); --line: rgba(26, 26, 26, .15); --rule: rgba(26, 26, 26, .12); --accent: #2f6feb; --accent-deep: #1f4fb0; --accent-ink: #ffffff; --accent-soft: rgba(47, 111, 235, .12); --sun: #f5d34a; --sun-ink: #2a2406; --select: #3fc9a6; --select-ink: #062a22; --tint-a: #ecece8; --tint-thumb: var(--tint-a); --danger: #b3372b; --danger-ink: #ffffff; --tape: rgba(220, 210, 180, .8); --hover: rgba(26, 26, 26, .06); --dock-fade: rgba(242, 242, 240, 0); --btn-disabled: rgba(26, 26, 26, .12); --btn-disabled-ink: rgba(26, 26, 26, .45); --shadow-1: 0 1px 2px rgba(0, 0, 0, .06); --shadow-2: 0 3px 10px rgba(0, 0, 0, .09); --shadow-3: 0 12px 28px rgba(0, 0, 0, .14); --texture: none; --texture-alpha: 0; --texture-blend: normal; --texture-repeat: repeat; --texture-size: auto; --texture-position: left top; --color-scheme: light; --star-size: 13px; --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3 6.2 20.4l1.1-6.5L2.6 9.3l6.5-.9z' fill='%23000'/%3E%3C/svg%3E"); --star-on: var(--ink); --star-off: var(--ink-faint); --rshape-size: 22px; --rshape-off: transparent; --rshape-glow: none; --scrim: rgba(20, 16, 12, .42); --badge-bg: rgba(10, 10, 10, .62); --badge-ink: #ffffff; --photo-chip: rgba(26, 26, 26, .6); --shadow-sheet: 0 -8px 30px rgba(0, 0, 0, .18); --tape-sun: rgba(220, 210, 180, .5); --tape-sheen: rgba(255, 255, 255, .30); background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.65; }
+/* 纹理层：只放 --texture。横线（journal 画在卡片上）与光晕（night 画在这里）都走这一层。 */
+.fp-app::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 5; pointer-events: none; background-image: var(--texture); background-repeat: var(--texture-repeat); background-size: var(--texture-size); background-position: var(--texture-position); opacity: var(--texture-alpha); mix-blend-mode: var(--texture-blend); }
+.fp-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 var(--pad) 140px; }
+/* -------------------------------------------------------------- 顶部 *//* z-index 4 < 纹理层 5：纹理（纸颗粒 / 顶部光晕）要盖过顶栏，否则顶部会有一道没材质的地带 */
+/* 顶部留白原为写死 62px（按 iPhone 的 44px 状态栏 + 间距猜的），安卓各机型的
+   胶囊按钮高度不一（32 / 40px+ 都有），写死就会偏或压内容。
+   现在走 --status-top：由 store.js 用 getMenuButtonBoundingClientRect 实测后
+   内联到 .fp-app 上，量不到（H5 / 旧基础库）就落回 62px 这个原值。
+   变量挂在 .fp-app 而不是 page —— 小程序改不了 page 的 style 属性，
+   而 .fp-app 是每个页面的根节点，inline style 由 JSX 直接渲染。 */
+.fp-app { --status-top: 62px; }
+.fp-head { position: relative; z-index: 4; padding: var(--status-top) var(--pad) 10px; display: flex; flex-direction: column; gap: 4px; background: var(--paper); }
+/* flex-wrap 是兜底不是常态：系统字号放大或标题极长时，日期签整体换到第二行
+   （row-gap 4px），而不是被挤到标题的省略号里彻底消失。 */
+.fp-head-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; row-gap: 4px; }
+/* 标题区：菜名居左、日期签居右同一行。菜名要能让位 —— 名字最长能到十几个字
+   （「古市香跷脚牛肉」是店名，菜名如「番茄鸡蛋打卤面」也常见），min-width: 0
+   加省略号保证日期签不被挤出屏；日期签自身不缩不放，永远是「10月08日 18:40」那么宽。
+   注意：overflow 只能给内层 .fp-title-in —— .fp-title 要 overflow:visible，
+   抹茶胶带挂在 .fp-title::before 上且 top:-10px 悬在标题框外，标题框一 overflow:hidden
+   胶带就被裁掉一半。 */
+.fp-head-bar .fp-title { min-width: 0; flex: 0 1 auto; }
+.fp-head-bar .fp-head-meta { flex: 0 0 auto; white-space: nowrap; }
+.fp-title-in { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-title { font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+.fp-head-meta { font-family: var(--font-num); font-size: 12px; letter-spacing: .04em; color: var(--ink-faint); }
+/* ---------------------------------------------------------- 月份分隔 */
+.fp-month { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; font-family: var(--font-num); font-size: 11px; letter-spacing: .16em; color: var(--ink-faint); }
+/* 月份折叠开关（只有店铺页用）：月份签 + 笔数 + 小箭头，整枚可点 */
+.fp-month-toggle { display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+.fp-month-count { opacity: .62; font-size: 10.5px; }
+.fp-month-caret { opacity: .55; transition: transform .18s ease; }
+.fp-month-toggle.fp-open .fp-month-caret { transform: rotate(180deg); }
+.fp-month-rule { flex: 1; height: 1px; background: var(--line); }
+/* ---------------------------------------------------------- 城市地图墙
+   城市页彻底不走列表：中国地图轮廓（china-map.js 数据）+ 按真实经纬度落点的图钉；
+   点图钉才在地图下方展开该城的 .fp-rec 明细。
+   轮廓与引线在同一个 svg 里（viewBox 与钉的百分比坐标同源，见 screens.jsx），
+   这里只负责「地图」这块画布、陆地与图钉的通用外观。 */
+.fp-map { position: relative; height: 264px; margin: 14px 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-1); overflow: hidden; }
+.fp-map-svg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+/* 陆地：中性纸色块，材质交给方向文件 */
+.fp-map-land { fill: var(--tint-a); stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* 锚点 = 真经纬度落点（小圆点），标签被推开后靠引线指回锚点 */
+.fp-pin-anchor { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--paper-2); pointer-events: none; transition: opacity .16s ease; }
+.fp-pin-lead { stroke: var(--accent-deep); stroke-width: 1.5; opacity: .9; vector-effect: non-scaling-stroke; transition: opacity .16s ease; }
+/* 视图补间期间只动地图，标签层（钉 / 锚点 / 引线）整体淡出，落定后再淡入 ——
+   返回全国时省标签是按目标视图布局的，中途每帧都被限位挤到地图边缘，
+   18 枚挤成两排再滑回来，观感就是「都挤回来了」。淡出到落定比在边缘挤一团干净。
+   只作用于全国层级（下钻方向的市钉是跟着地图走的，保持可见）。 */
+.fp-map.fp-map-moving .fp-pin, .fp-map.fp-map-moving .fp-pin-anchor, .fp-map.fp-map-moving .fp-pin-lead { opacity: 0; pointer-events: none; }
+/* 图钉：一枚可点的小贴纸。位置/倾角由内联样式给出（--tilt） */
+.fp-pin { position: absolute; transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)); display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 7px 11px 6px; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-1); transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
+.fp-pin:hover { z-index: 3; box-shadow: var(--shadow-2); transform: translate(-50%, -50%) rotate(0deg) scale(1.06); }
+.fp-pin-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; line-height: 1.15; color: var(--ink); white-space: nowrap; }
+.fp-pin-count { font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+/* 拥挤降级（data-tier，见 CityScreen assignTiers）：
+   pill = 一行名签「名 笔数」；dot = 只剩笔数的小圆钮。默认两行全标签不用标 tier。
+   三档都是按钮，降的只是形态 —— 省的高亮、下钻入口都不受影响。 */
+.fp-pin.fp-pin-pill { flex-direction: row; align-items: baseline; gap: 5px; padding: 5px 11px; }
+.fp-pin.fp-pin-pill .fp-pin-name { font-size: 13px; }
+.fp-pin.fp-pin-dot { width: 26px; height: 26px; padding: 0; border-radius: 50%; align-items: center; justify-content: center; background: var(--accent); }
+.fp-pin.fp-pin-dot .fp-pin-count { font-size: 11px; font-weight: 700; color: var(--accent-ink); }
+/* 分省路径（下钻底图）：默认只是底图；有记录的省放行点击、填充高亮，
+   data-cur = 当前下钻的省。svg 整体 pointer-events:none，只在这里按 data-has 放行。 */
+.fp-prov { transition: fill .16s ease; }
+.fp-prov.fp-has { pointer-events: auto; fill: var(--accent-soft); }
+.fp-prov.fp-has:hover { fill: var(--accent); stroke: var(--accent-deep); }
+/* 下钻返回签：钉在地图左上角，样式跟图钉同一套贴纸语言 */
+.fp-mapback { position: absolute; left: 8px; top: 8px; z-index: 5; padding: 4px 11px; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius-chip); box-shadow: var(--shadow-1); font-size: 12px; font-weight: 700; color: var(--ink); transition: transform .16s ease, box-shadow .16s ease; }
+.fp-mapback:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+/* 城市详情入口的提示句：内联明细面板已迁去二级页，这里只剩一句交互说明 */
+.fp-cityhint { margin: 16px 0 8px; font-size: 12.5px; color: var(--ink-faint); }
+/* —— 城市排行：紧跟地图下方，把「美食足迹」的结论直接摊开 ——
+   地图回答「在哪」，这一块回答「去了多少次」。条数 = 该城记录数，
+   宽度按最大笔数归一（榜首 100%），所以榜首总是满格、一眼看出量级差。
+   整行可点：与地图上的图钉、下方「没测坐标」行同一个入口 —— 进城市详情页。 */
+.fp-rank { margin: 4px 0 12px; }
+.fp-rank-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.fp-rank-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ink); }
+.fp-rank-note { font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.fp-rank-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 12px; margin-bottom: 6px; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-1); transition: transform .14s ease, box-shadow .14s ease, background .14s ease; }
+.fp-rank-row:hover { box-shadow: var(--shadow-2); }
+.fp-rank-row.fp-on { background: var(--tint-a); border-color: var(--accent-deep); }
+.fp-rank-row:active { transform: scale(.995); }
+.fp-rank-no { flex: 0 0 auto; width: 20px; font-family: var(--font-num); font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.fp-rank-row.fp-on .fp-rank-no { color: var(--accent-deep); font-weight: 700; }
+.fp-rank-name { flex: 0 0 auto; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.fp-rank-bar { flex: 1 1 auto; min-width: 0; height: 7px; border-radius: 4px; background: var(--tint-a); overflow: hidden; }
+.fp-rank-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.fp-rank-row.fp-on .fp-rank-bar i { background: var(--accent-deep); }
+.fp-rank-count { flex: 0 0 auto; min-width: 26px; text-align: right; font-family: var(--font-num); font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+/* 收起/展开行：没有序号和条槽，靠文字说明它管着什么 */
+.fp-rank-row.fp-rank-more { border-style: dashed; background: var(--paper); box-shadow: none; }
+.fp-rank-row.fp-rank-more:hover { box-shadow: var(--shadow-1); }
+.fp-rank-row.fp-rank-more .fp-rank-no { color: var(--ink-faint); }
+.fp-rank-row.fp-rank-more .fp-rank-name { font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+/* 「没有城市」上不了地图：地图下方一条安静的入口，点了同样展开明细 */
+.fp-nocity { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 2px 0 10px; padding: 10px 14px; background: var(--paper); border: 1px dashed var(--line); border-radius: var(--radius); font-size: 12.5px; color: var(--ink-faint); }
+/* ------------------------------------------------------------ 时间轴行 */
+.fp-list { display: flex; flex-direction: column; }
+.fp-rec { position: relative; display: grid; grid-template-columns: 72px 1fr; gap: 13px; align-items: center; width: 100%; text-align: left; padding: 10px; margin-bottom: 10px; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-1); transition: transform .14s ease, background .14s ease, box-shadow .14s ease; }
+.fp-rec:active { transform: scale(.995); }
+/* 键盘焦点：所有可交互元素都要有可见焦点环 */
+/* 浏览器表面：选中色、光标。默认值属于任何设计系统，不属于这一套。 */
+.fp-app .fp-when, .fp-app .fp-sticker, .fp-app .fp-rate-num, .fp-app .fp-head-meta, .fp-app .fp-month, .fp-app .fp-label { font-variant-numeric: tabular-nums; }
+.fp-thumb { position: relative; width: 72px; height: 72px; overflow: hidden; border-radius: var(--radius-thumb); background: var(--tint-thumb); }
+/* #ifdef weapp */
+.fp-thumb > view, .fp-thumb > text, .fp-thumb > image, .fp-thumb > input, .fp-thumb > textarea, .fp-thumb > button { height: 100%; }
+/* #endif */
+/* #ifndef weapp */
+.fp-thumb > * { height: 100%; }
+/* #endif */
+.fp-rec-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 52px; }
+.fp-eat { font-family: var(--font-display); font-size: 20px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; }
+.fp-sub { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--ink-soft); }
+.fp-sub-shop { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-sub-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-faint); flex: 0 0 auto; }
+/* 位置段原先整个文件里没有规则：.fp-sub 里的块级子项默认上下流，
+   圆点被甩到文字上方单独一行（评审 P1「像渲染事故」）。
+   显式 flex 圆点与文字同排；文字端 min-width:0 + 省略号，
+   「成都 · 锦江区」这类双层地名一行放不下时收尾，不折出孤字。 */
+.fp-sub-loc { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fp-sub-loctext { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-noshop { color: var(--ink-faint); }
+.fp-when { font-family: var(--font-num); font-size: 11px; color: var(--ink-faint); letter-spacing: .02em; }
+.fp-whenrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* 列表评分：形状由 --star 决定（手账＝铅笔星，夜市＝灯珠），一条机制两套形 */
+.fp-stars { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.fp-star-glyph { display: inline-block; width: var(--star-size); height: var(--star-size); font-size: 0; background-color: var(--star-off); -webkit-mask-image: var(--star); mask-image: var(--star); -webkit-mask-size: var(--star-size) var(--star-size); mask-size: var(--star-size) var(--star-size); -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.fp-star-glyph.fp-on { background-color: var(--star-on); }
+/* 日期元件：同一位置、同一个盒子，形状/底/字全由方向决定 */
+.fp-sticker { position: absolute; right: 9px; top: 9px; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--paper-2); color: var(--ink); font-family: var(--font-num); font-size: 11.5px; font-weight: 700; letter-spacing: .01em; box-shadow: none; }
+/* -------------------------------------------------------------- 照片槽 */
+.fp-slot { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: var(--tint-a); }
+.fp-slot image { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.fp-slot-empty { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; text-align: center; color: var(--ink-soft); pointer-events: none; }
+.fp-slot-glyph { opacity: .5; }
+.fp-slot-hint { font-size: 11px; letter-spacing: .06em; color: var(--ink-faint); line-height: 1.3; }
+/* 堆叠槽（data-stack，只有详情页 hero）：一条记录 3–5 张叠成一摞。
+   每层照片的边距由 JS 按「离顶距离」算好写进 --stack-pad（不复用 --pad ——
+   那是 .fp-app 的布局边距）：顶上一张内缩最多（12px）、
+   摆得最正，越往底层越大（12→9→6→3→0），于是每层都从上一层底下探出一圈边，
+   再各自歪一点 —— 探出的圈在角上宽、在边中收窄，就是一摞照片散开的样子。
+   歪出槽外的角由 .fp-slot 的 overflow 裁掉。
+   不能写 width:auto —— 绝对定位的 <img> 是替换元素，auto 会取固有宽度
+   （1920px 的原图直接铺出去，槽里只剩左上角一截）。 */
+.fp-slot.fp-slot-stack image { top: var(--stack-pad); right: var(--stack-pad); bottom: var(--stack-pad); left: var(--stack-pad); width: calc(100% - var(--stack-pad) * 2); height: calc(100% - var(--stack-pad) * 2); transition: transform .22s ease, inset .22s ease, width .22s ease, height .22s ease; }
+.fp-slot.fp-slot-stack image.fp-stack-under { box-shadow: var(--shadow-2); }
+.fp-slot.fp-slot-stack image.fp-stack-top { border: 5px solid var(--paper-2); border-radius: 3px; box-shadow: var(--shadow-3); }
+/* 滑动跟手期间关过渡（开着会被 .22s 追着走、拖起来发糊）；松手类一撤，既有过渡接管归位。
+   与 .fp-slot.fp-slot-stack image 同 specificity → 必须排在它后面才压得住。 */
+.fp-slot.fp-slot-drag image { transition: none; }
+/* 张数计数：hover 徽标只在鼠标悬停时出现，这个常驻 —— 「还有几张」是常态信息。 */
+.fp-slot-count { position: absolute; right: 8px; top: 8px; z-index: 12; padding: 2px 7px; border-radius: var(--radius-chip); background: var(--badge-bg); color: var(--badge-ink); font-family: var(--font-num); font-size: 10.5px; letter-spacing: .04em; pointer-events: none; }
+/* -------------------------------------------------------- 底部动作区 */
+.fp-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 12; padding: 14px var(--pad) 46px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; background: linear-gradient(to top, var(--paper) 78%, var(--dock-fade)); }
+.fp-dock > .fp-btn-primary { width: 100%; }
+.fp-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 54px; padding: 0 18px; border-radius: var(--radius-btn); background: var(--accent); color: var(--accent-ink); font-family: var(--font-body); font-weight: 600; letter-spacing: .02em; transition: transform .12s ease, opacity .12s ease; }
+/* 禁用态：显式两档 token，不用 opacity —— 透明度会把强调色压成脏色，也没法落到 Flutter 的 Color 上。
+   选择器里那个 button 不是装饰：方向文件写 `.fp-app[data-variant=…] .fp-btn-primary`（0,3,0）
+   来铺强调色底，与 `.fp-app .fp-btn-primary:disabled` 同特异性、又比它后加载，
+   会把这整条禁用规则压掉。加一个元素选择器把特异性抬到 (0,3,1)。 */
+.fp-app .fp-btn.fp-btn-primary.fp-disabled { background: var(--btn-disabled); color: var(--btn-disabled-ink); border-color: var(--line); box-shadow: none; }
+.fp-btn-primary:active { transform: scale(.97); }
+.fp-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 46px; padding: 0 18px; border: 1px solid var(--line); border-radius: var(--radius-chip); color: var(--ink-soft); font-size: 14px; transition: background .12s ease; }
+.fp-btn-ghost:hover { background: var(--hover); }
+/* 未补齐必填时的提示：**贴在按钮上方**。
+   v1 两版都错在位置（bottom:100% 浮到 dock 之外被渐变压住；bottom:18px 落到按钮下面，
+   读起来像按钮的注释而不是不能点的原因）。现在回到流内：dock 允许换行，
+   提示 order:-1 占满一行落在按钮之前；自己带纸色底，因为 dock 顶部那段是透明的。 */
+.fp-blockhint { order: -1; flex: 1 0 100%; padding: 4px 12px; border-radius: var(--radius-chip); background: var(--paper-2); text-align: center; font-size: 12px; line-height: 1.35; color: var(--accent-deep); pointer-events: none; }
+/* ------------------------------------------------------------ Tab 栏 */
+.fp-tabbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 12; height: 84px; padding: 8px 14px 30px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: var(--paper-2); box-shadow: 0 -1px 0 var(--line), 0 -10px 26px var(--hover); }
+/* 带 dock（底部动作区）的屏：dock 实测高度 ≈156px（按钮 54 + 上下 padding + 必填提示那一行），
+   原来只有 140px（Tab 栏那档更只有 104px），于是滚到底时最后一个字段会被 dock 压住一截。
+   详情 / 录入 / 编辑这三个屏在 screens.jsx 里标了 data-dock，这里给够空间。 */
+.fp-scroll.fp-scroll-dock { padding-bottom: 176px; }
+.fp-app.fp-tabbar-page .fp-scroll { padding-bottom: 104px; }
+.fp-app.fp-tabbar-page .fp-scroll.fp-scroll-dock { padding-bottom: 176px; }
+/* 既没有 dock 也没有 Tab 栏的屏（详情页）：底部不用给谁留位。
+   它原来被错标成 data-dock="1"，于是屏幕上凭空多出 176px 空白，内容只有半屏高。 */
+.fp-scroll.fp-scroll-nodock { padding-bottom: 28px; }
+.fp-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--ink-faint); }
+.fp-tab.fp-on { color: var(--ink); }
+.fp-tab-add { width: 56px; height: 56px; margin-top: -26px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--accent-ink); transition: transform .12s ease; }
+.fp-tab-add:active { transform: scale(.94); }
+/* ---------------------------------------------------------- 录入表单 */
+.fp-form { display: flex; flex-direction: column; gap: 20px; padding-bottom: 8px; }
+.fp-field { display: flex; flex-direction: column; gap: 7px; }
+.fp-label { display: flex; align-items: center; gap: 6px; font-family: var(--font-num); font-size: 11px; letter-spacing: .14em; color: var(--ink-faint); }
+.fp-req { padding: 0 4px; border: 1px solid currentColor; border-radius: 2px; font-family: var(--font-num); font-size: 10px; letter-spacing: .08em; color: var(--accent-deep); }
+/* 可选标记：与 .fp-req 同尺寸同圆角，只是不填满 —— 两者对等才读得出是一组状态 */
+.fp-opt { padding: 0 4px; border: 1px solid var(--line); border-radius: 2px; font-family: var(--font-num); font-size: 10px; letter-spacing: .08em; color: var(--ink-faint); }
+.fp-input { width: 100%; padding: 6px 0 8px; border: 0; border-bottom: 2px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); font-family: var(--font-display); font-size: 22px; font-weight: 600; outline: none; }
+.fp-input-ph { color: var(--ink-faint); font-weight: 400; }
+.fp-input:focus { border-bottom-color: var(--accent); }
+.fp-input-sm { font-size: 16px; font-weight: 500; }
+.fp-sug { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+/* 单行：chips 只排一行，不换行 —— 不裁剪（overflow 会把 chip 的阴影切掉），
+   数量已限到一行放得下，不存在溢出 */
+.fp-sug-line { flex-wrap: nowrap; }
+.fp-sug-line .fp-chip { flex: 0 0 auto; }
+/* 筛选 chips 在左、视图切换在右：一行放得下，也不与星级 chips 抢位置 */
+.fp-filterrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fp-filterrow .fp-sug { margin-top: 0; }
+.fp-viewseg { flex: 0 0 auto; }
+.fp-viewseg .fp-seg-btn { padding: 5px 10px; }
+/* 备份入口：一行低调的文字按钮。不做成醒目按钮 —— 它是「备而不用」的功能，
+   常驻但不能抢新记录的注意力。入口在城市页滚动区底部（首页头部已让给搜索/筛选）。 */
+.fp-backuprow { display: flex; justify-content: flex-end; margin-top: 2px; }
+.fp-backuprow-foot { margin-top: 14px; }
+.fp-backup-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 2px; font-size: 12px; color: var(--ink-faint); }
+.fp-backup-btn image { opacity: 0.75; }
+/* 底部抽屉：遮罩压暗 + 面板从下方升起。 */
+.fp-sheet-mask { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 30; display: flex; align-items: flex-end; background: var(--scrim); }
+.fp-sheet { width: 100%; padding: 18px 16px calc(14px + env(safe-area-inset-bottom)); background: var(--paper); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-sheet); }
+.fp-sheet-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.fp-sheet-note { margin: 6px 0 14px; font-size: 12px; line-height: 1.55; color: var(--ink-faint); }
+.fp-sheet-item { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-top: 1px solid var(--line); }
+.fp-sheet-item-text { display: flex; flex-direction: column; gap: 2px; }
+.fp-sheet-item-name { font-size: 14px; color: var(--ink); }
+.fp-sheet-item-sub { font-size: 12px; color: var(--ink-faint); }
+.fp-sheet-cancel { margin-top: 8px; padding: 12px 0; text-align: center; font-size: 14px; color: var(--ink-faint); border-top: 1px solid var(--line); }
+/* 撤销条：删除后从底部升起，3 秒后自行消失。
+   贴在 tabbar 上方，避开底栏；z-index 高于内容、低于弹层。 */
+.fp-undobar { position: absolute; left: 14px; right: 14px; bottom: 96px; z-index: 20; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-radius: 10px; background: var(--ui-panel); box-shadow: var(--shadow-3); }
+.fp-undobar-text { font-size: 13px; color: var(--ui-panel-ink); }
+.fp-undobar-btn { padding: 3px 10px; font-size: 13px; font-weight: 600; color: var(--sun); }
+/* 照片管理条：缩略图 + 单删按钮 + 加图格，排在叠图槽下面。
+   没有它的话，叠图只能翻不能删，"最多 5 张"就退化成"只能覆盖"。 */
+.fp-pstrip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fp-pstrip-cell { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--tint-thumb); }
+.fp-pstrip-img { width: 100%; height: 100%; }
+/* 删除点：可见 24px + ::after 往外扩一圈热区（cell 是 overflow:hidden，
+   出血的上/右会被裁掉，实际可点区约 34px）—— 18px 裸点太难点中，
+   「能加图却删不动」就是这么来的。 */
+.fp-pstrip-del { position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--photo-chip); }
+.fp-pstrip-del::after { content: ""; position: absolute; top: -7px; right: -7px; bottom: -7px; left: -7px; }
+.fp-pstrip-del text { font-size: 12px; line-height: 1; color: var(--badge-ink); }
+.fp-pstrip-add { display: grid; place-items: center; border: 1px dashed var(--line); background: transparent; }
+.fp-pstrip-full { display: grid; place-items: center; border: 1px solid var(--line); background: transparent; }
+.fp-pstrip-full text { font-size: 11px; color: var(--ink-faint); }
+/* 宫格：两列贴纸卡。卡片 = 照片（或占位面）+ 白条脚（菜名 + 星级）。
+   整卡是一个按钮 —— 点哪都进详情；缩略只读，换图入口留在详情页 hero。 */
+.fp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0; }
+.fp-tile { display: flex; flex-direction: column; width: 100%; padding: 0; text-align: left; }
+.fp-tile-media { position: relative; width: 100%; overflow: hidden; display: grid; place-items: center; gap: 6px; align-content: center; border-radius: var(--radius) var(--radius) 0 0; background: var(--tint-thumb); }
+.fp-tile-media image { width: 100%; height: 100%; object-fit: cover; }
+.fp-tile-glyph { color: var(--ink-faint); }
+.fp-tile-eat { font-family: var(--font-body); font-size: 12px; font-weight: 700; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 82%; padding: 0 8px; }
+.fp-tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 7px 9px 8px; border-radius: 0 0 var(--radius) var(--radius); background: var(--paper-2); }
+/* footer 菜名恒定在（有图/无图骨架一致）：flex 吃掉剩余宽度、星星钉右侧、长名走省略号。
+   .fp-tile-eat 原本的 max-width:82%/padding 是给「图区居中」那个位置用的，
+   搬进 footer 会把星星挤出卡片 —— 这里按 footer 语境重设。 */
+.fp-tile-foot .fp-tile-eat { flex: 1 1 auto; min-width: 0; max-width: none; padding: 0; text-align: left; }
+.fp-tile .fp-sticker { right: 7px; top: 7px; width: 40px; height: 40px; font-size: 11px; }
+.fp-chip { padding: 5px 11px; border: 1px solid var(--line); border-radius: var(--radius-chip); background: var(--paper-2); color: var(--ink-soft); font-size: 13px; transition: border-color .12s ease, color .12s ease, background .12s ease; }
+.fp-chip:hover { border-color: var(--accent); color: var(--accent-deep); }
+/* 时间轴搜索：搜索框 + 视图切换一行，下面单独一排星级筛选 chips。
+   视图切换不和 chips 同排 —— 四颗 chips 加一个 seg 塞一行必然挤成两行。 */
+.fp-searchrow { display: flex; align-items: center; gap: 8px; padding: 8px 0 2px; }
+.fp-searchrow .fp-search { flex: 1 1 auto; min-width: 0; }
+.fp-search { display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-btn); background: var(--paper-2); }
+.fp-search .fp-search-input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 14px; color: var(--ink); }
+.fp-search-ph { color: var(--ink-faint); }
+.fp-search-clear { flex: 0 0 auto; padding: 2px 4px; color: var(--ink-faint); font-size: 13px; }
+.fp-search-clear:hover { color: var(--ink); }
+/* 聚焦态：边线转 accent + 一圈淡晕。WXSS 不保证 :focus 生效，由页面挂 class 驱动。 */
+.fp-search.fp-focus { border-color: var(--accent-deep); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* chip 选中态。方向文件的 .fp-app[data-variant=…] .fp-chip 是 (0,3,0) 且后加载，
+   这里必须抬到 (0,4,0) —— 挂一个属性选择器。没写 data-on 的 chip 不受影响。 */
+.fp-app .fp-chip.fp-on { background: var(--tint-thumb); color: var(--ink); box-shadow: var(--shadow-1); }
+/* 筛不到时空态里的「清除筛选」：跟在文案后面的一枚文字胶囊。 */
+.fp-empty-reset { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: var(--radius-chip); background: var(--accent-soft); color: var(--accent-deep); font-size: 12px; }
+.fp-drop { position: relative; height: 196px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); }
+.fp-rate { display: flex; align-items: center; gap: 10px; }
+.fp-star { width: 40px; height: 40px; display: grid; place-items: center; }
+/* 录入评分形状：底与形由方向给（手账＝手绘圈，夜市＝灯珠 + 外发光） */
+.fp-rshape { display: block; width: var(--rshape-size); height: var(--rshape-size); border-radius: 50%; background: var(--rshape-off); border: 1.5px solid var(--ink-faint); transition: background .12s ease, border-color .12s ease, box-shadow .12s ease; }
+.fp-rshape.fp-on { background: var(--select); border-color: var(--select); box-shadow: var(--rshape-glow); }
+.fp-rate-num { margin-left: 4px; font-family: var(--font-num); font-size: 13px; color: var(--ink-faint); }
+.fp-hint { font-size: 12px; color: var(--ink-faint); }
+/* 短评行：输入框 + 右侧语音按钮。按钮压着框的右沿（输入框 flex 占满，按钮定宽不缩），
+   和搜索框旁边那颗清除键一个位置关系。 */
+.fp-noterow { display: flex; align-items: center; gap: 8px; }
+.fp-noterow .fp-input { flex: 1 1 auto; min-width: 0; }
+.fp-michint { margin-top: 6px; }
+/* 位置选择器：「最近去过」一行常驻在字段下；全国省 → 市的大列表走弹层
+   （.fp-area-pop 挂在 .fp-confirm 遮罩上），不占录入页纵向空间。 */
+.fp-area-row { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; }
+.fp-area-head { display: flex; align-items: center; gap: 8px; }
+.fp-area-lab { font-size: 11px; letter-spacing: .1em; color: var(--ink-faint); }
+.fp-area-sub { font-size: 11px; color: var(--ink-faint); }
+.fp-area-back { margin-right: 2px; padding: 2px 9px; border: 1px solid var(--line); border-radius: var(--radius-btn); background: var(--paper-2); color: var(--ink-soft); font-size: 11.5px; }
+.fp-area-back:hover { border-color: var(--accent); color: var(--accent-deep); }
+.fp-area-close { margin-left: auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-faint); font-size: 13px; }
+.fp-area-close:hover { background: var(--hover); color: var(--ink); }
+/* 弹层卡片：复用 .fp-confirm 的遮罩，卡片本身自己长 —— 列表能比内联时更高 */
+.fp-area-pop { width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); }
+/* 省/市列表：一行一个，限高内部滚动 —— 34 个省平铺会撑爆弹层 */
+.fp-area-list { max-height: 210px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-2); }
+.fp-area-list-pop { max-height: 300px; }
+.fp-arearow { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 9px 12px; border: 0; border-bottom: 1px solid var(--hover); background: none; color: var(--ink); font-size: 14px; text-align: left; }
+.fp-arearow:last-child { border-bottom: 0; }
+.fp-arearow:hover { background: var(--hover); }
+.fp-arearow.fp-on { background: var(--accent-soft); }
+.fp-area-n { font-family: var(--font-num); font-size: 12px; color: var(--ink-faint); }
+.fp-area-now { font-size: 11px; color: var(--accent-deep); }
+.fp-area-none { border: 1px dashed var(--line); border-radius: var(--radius); color: var(--ink-soft); }
+.fp-area-none:hover { border-color: var(--accent); }
+/* 市级层底部的「只选城市」：区县三级里允许只定到城市就收 */
+.fp-area-skip { color: var(--accent-deep); font-size: 13px; justify-content: center; }
+.fp-auto { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--paper-2); }
+.fp-auto-val { font-size: 14px; font-weight: 500; }
+.fp-auto-edit { margin-left: auto; font-size: 12px; color: var(--accent-deep); }
+.fp-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius-chip); background: var(--paper-2); }
+.fp-seg .fp-seg-btn { padding: 5px 12px; border-radius: var(--radius-chip); color: var(--ink-soft); font-size: 12px; }
+/* 选中段的底/字由方向给：两方向都把「时间」这个词留给 --sun 一族 */
+.fp-seg .fp-seg-btn.fp-on { background: var(--sun); color: var(--sun-ink); }
+.fp-time-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* -------------------------------------------------------------- 详情 */
+/* 标题区在原生导航栏下面：菜名居左、日期签居右，同一行。
+   菜名复用 .fp-title（导航栏标题那套字号与字重）—— 详情页的标题就是这一页的主角，
+   不该再有一套自己的大字；日期签用 .fp-head-meta，只做标注。
+   两行并一行后照片上移，首屏即可见「菜名 + 照片 + 评分」。 */
+.fp-detail { display: flex; flex-direction: column; gap: 18px; }
+.fp-hero { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.fp-detail-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 13px; color: var(--ink-soft); }
+/* 详情页的评分单独一行：结构在 base，字号与间距由方向给 */
+.fp-detail-rate { display: flex; align-items: center; gap: 9px; }
+.fp-detail-rate .fp-stars { flex: 0 0 auto; }
+/* 详情页店名：进店铺页的入口。点状下划线标出「这一块单独可点」，
+   不做成大按钮 —— 这一行的主角仍是「哪家店」，不是导航。 */
+.fp-detail-shop { font-size: 13px; padding: 0; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+.fp-detail-shop:hover { color: var(--accent-deep); text-decoration-style: solid; }
+/* 行内店名链接（时间轴/城市页）：整行点击开详情，店名这一个词开店铺页。 */
+.fp-sub-shoplink { padding: 0; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+.fp-sub-shoplink:hover { color: var(--accent-deep); text-decoration-style: solid; }
+/* ------------------------------------------------------------- 店铺页
+   店头卡：店名 + 三个实时算出来的数字（去过/均分/最近）+ 地址行。
+   下面的记录列表复用时间轴的行结构，不另造。 */
+.fp-shophead { position: relative; display: flex; flex-direction: column; gap: 7px; padding: 16px; margin-bottom: 16px; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+/* 店面照：满宽横幅槽（16/7），没拍就是空槽；结构同 .fp-thumb，尺寸另给 */
+.fp-shop-photo { position: relative; width: 100%; height: 116px; margin-bottom: 2px; background: var(--tint-a); overflow: hidden; }
+.fp-shop-photo image { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 店面照的图标按钮：无图时悬浮在店头卡右上角（不占流内版面）；
+   有图时叠在横幅右上角。 */
+.fp-shop-photoicon { position: absolute; top: 0; right: 0; width: 34px; height: 34px; display: grid; place-items: center; z-index: 2; border-radius: 50%; background: var(--paper-2); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--ink-soft); }
+.fp-shop-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.fp-shop-stat { display: flex; flex-direction: column; }
+.fp-shop-statnum { font-size: 18px; line-height: 1.3; color: var(--ink); }
+.fp-shop-statlab { font-size: 11px; color: var(--ink-faint); }
+.fp-shop-addr .fp-input { width: 100%; }
+.fp-shop-addrbtn { font-size: 13px; padding: 0; text-align: left; color: var(--ink-faint); }
+.fp-shop-addrbtn.fp-has { color: var(--ink); }
+.fp-shop-addrbtn:hover { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px; }
+.fp-note { padding-left: 12px; border-left: 2px solid var(--accent); font-size: 15px; line-height: 1.8; color: var(--ink-soft); }
+.fp-detail-actions { display: flex; gap: 10px; padding-top: 4px; }
+.fp-detail-actions .fp-btn-ghost { flex: 1; }
+/* -------------------------------------------------------------- 杂项 */
+.fp-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 60px 0; text-align: center; color: var(--ink-faint); }
+.fp-iconbtn { width: 40px; height: 40px; margin-left: -8px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); transition: background .12s ease; }
+.fp-iconbtn:hover { background: var(--hover); }
+.fp-confirm { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; place-items: center; padding: 28px; background: var(--scrim); backdrop-filter: blur(2px); }
+.fp-confirm-card { width: 100%; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); }
+.fp-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+/* 弹窗里的按钮收成常规尺寸，别继承底部大按钮 */
+.fp-app .fp-confirm-actions .fp-btn-primary { width: auto; height: 42px; padding: 0 18px; border-radius: 8px; font-size: 14px; font-weight: 600; letter-spacing: .02em; border: 0; box-shadow: none; }
+.fp-app .fp-confirm-actions .fp-btn-ghost { flex: 0 0 auto; }
+.fp-btn-danger { background: var(--danger); color: var(--danger-ink); }
+/* ---------------------------------------------------------- 动效 */
+@keyframes fp-stamp-in {
+  0% { transform: scale(1.9) rotate(-16deg); opacity: 0; }
+  55% { transform: scale(.94) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.fp-stamping .fp-stamp-target { animation: fp-stamp-in .42s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes fp-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.fp-enter { animation: fp-fade-up .26s ease both; }
+/* -------------------------------------------------------- 页内控制台 */
+/* ------------------------------------------------- 设计说明那一块画板 *//* 说明板是「关于这两个方向的元信息」，既不是 A 也不是 B，所以自带中性白底。 */
+
+/* ==========================================================================
+   抹茶贴纸（V1 的贴纸拼贴材质 + 近中性白台面 + 由刻度派生的绿色一族）
+   .fp-app[data-variant="matcha"]
+
+   材质来源（贴纸拼贴那套）：6px 模切白边（border 而非 shadow）
+   + 双层影 + 四拍倾斜 + 48px 圆形旋转日期贴纸。
+
+   —— 配色不是手挑的，是用 color-palette skill 的算法从品牌绿派生的 ——
+   品牌 #5bb08a → HSL(153, 35%, 52%)，按 skill 的 11 档明度表生成刻度：
+     50 #f5f9f8 · 100 #ebf4f0 · 200 #d4e8df · 300 #abd4c1 · 400 #7ebea1
+     500 #50a57f · 600 #428a6a · 700 #377257 · 800 #2d5d47 · 900 #214535 · 950 #11221a
+   语义映射（照 skill 的 token 表，逐项实测过）：
+     台面 = #f6f6f4    近中性白（V 96%）
+                        ← **不要再压深**。压到 V90 一带（试过 #e7e7e4）会同时坏两件事：
+                        ① 落进「中间调」，绿配这种灰在屏幕上读作脏；
+                        ② 撞上画布 #e9ebec —— 画布/台面 1.105 → 1.036，
+                           手机画板直接从画布上消失，整页糊成一片灰。已实测返工一次。
+     卡片 = #ffffff    卡面 / 贴纸纸料（模切边与它同色，才读得出「厚」）
+     墨   = 950 #11221a        正文、描边、影全部由它派生（修饰色即绿族）
+     line = #c0ded0            发丝边（200 与 300 之间）：月分隔线、徽章描边、
+                               缩略图内圈都靠它，比 200 档 #d4e8df（压卡片 1.28）更立得住
+     行动 = 500 #50a57f + 墨字   ← **偏离 skill 的一处，且是算出来的**：
+                                  skill 规定 primary = 600 + 白字，实测白字压 600 只有 4.14，
+                                  过不了 4.5（600 压墨字也只有 4.00，两边都不行）；500 + 墨字 = 5.55 ✓
+     时间 = 300 #abd4c1 + 950   ← 本轮从 200 提到 300：200 档压白卡只有 1.28，
+                                日期圆贴读不出「一枚贴纸」；300 档是 1.63
+     选中芯片 = 浅底 #ebf4f0 + 墨字 + 2px 墨环（实心 500 只留给主动作）
+     照片槽 = 100 #ebf4f0（大面积）；列表缩略图槽 = 200 #d4e8df（--tint-thumb，
+              74px 里要塞下「这是空照片槽」，共用大面积那档太淡）
+     危险 = #7A342E（印泥朱砂，色相约 27°，离开抹茶 135°；压白纸 8.91:1）
+      （2026-10-21 当天两次实测返工：评分星换古铜、胶带换暖米，均回退 ——
+        小 / 密 / 孤立的异色不是点缀，是突兀；点缀感改由「胶的材质」承担，
+        见 .fp-title::before 的半透 + 浮起 + 上沿反光三件套）
+
+   —— 闸门实测（由 `gates.py --emit-header` 生成，**不是手抄**；22/22 全绿）——
+     墨 / 卡片                16.57 ≥ 12
+     画布 / 台面               1.11 ≥ 1.09
+     卡片 / 台面（取舍值，靠模切边分离）   1.08 ≥ 1.06
+     ink-soft 压卡片           8.09 ≥ 4.5
+     ink-soft 压台面           7.72 ≥ 4.5
+     ink-faint 压卡片          6.17 ≥ 4.5
+     ink-faint 压台面          5.89 ≥ 4.5
+     强调底上的字              5.55 ≥ 4.5
+     强调字压台面（accent-deep）   5.24 ≥ 4.5
+     时间底上的字             10.19 ≥ 4.5
+     选中底上的字              5.55 ≥ 4.5
+     照片槽 / 卡片             1.12 ≥ 1.1
+     缩略图槽 / 卡片           1.28 ≥ 1.15
+     描边 / 台面               1.33 ≥ 1.08
+     描边 / 卡片               1.44 ≥ 1.1
+     日期圆贴 / 卡片（300 档）   1.63 ≥ 1.45
+     日期圆贴 / 台面           1.50 ≥ 1.3
+     评分 off = 墨 50%，压白卡 3.26:1（图形门槛 3:1）
+     评分 on（读数）= 墨，压白卡 16.57:1
+     禁用钮底 / 台面           1.33 ≥ 1.05
+     禁用钮上的字 / 禁用底     3.68 ≥ 2.8
+     照片槽 / 台面（不出现的组合）   1.04  只报数（槽从不直接坐在台面上）
+
+   两条被拿掉 / 改写的门槛：
+     · 「卡片/台面的明度比」整条删掉。它算的是 HSL 的 L（max/min 通道的算术均值），
+       与感知脱节，而且与「日期圆贴/台面」在数学上互斥（前者要台面 ≤ L83%、
+       后者要 ≥ L91%）—— 同一个属性只留一个闸门：WCAG 相对亮度比。
+     · 「卡片/台面 ≥ 1.20」是照 journal/night 两个**没有落地**的方向写的门槛，
+       套到 matcha 上没有依据 —— matcha 自己写明的取值就是 1.08 加一句取舍。
+       改成 ≥ 1.06（低于它模切边才真的看不见），并**补上「画布/台面 ≥ 1.09」**：
+       那条才是能拦住「压深台面 → 整页变脏」的闸门。
+   ========================================================================== */
+.fp-app { --paper: #f6f6f4; --paper-2: #ffffff; --ink: #11221a; --ink-soft: rgba(17, 34, 26, .78); --ink-faint: rgba(17, 34, 26, .70); --icon-faint: rgba(17, 34, 26, .55); --line: #c0ded0; --rule: rgba(17, 34, 26, .18); --ink-ring: rgba(17, 34, 26, .20); --tape: rgba(212, 232, 223, .78); --accent: #50a57f; --accent-deep: #377257; --accent-ink: #11221a; --accent-soft: #ebf4f0; --sun: #abd4c1; --sun-ink: #11221a; --select: #50a57f; --select-ink: #11221a; --tint-a: #ebf4f0; --tint-thumb: #d4e8df; --radius: 16px; --radius-lg: 16px; --radius-thumb: 12px; --radius-btn: 999px; --radius-chip: 999px; --cut: 6px; --font-display: "STHupo", "华文琥珀", "Microsoft YaHei", "PingFang SC", sans-serif; --font-body: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif; --font-num: "Microsoft YaHei", "PingFang SC", ui-monospace, monospace; --hover: rgba(17, 34, 26, .06); --dock-fade: rgba(246, 246, 244, 0); --btn-disabled: rgba(17, 34, 26, .14); --btn-disabled-ink: rgba(17, 34, 26, .58); --danger: #7A342E; --danger-ink: #ffffff; --scrim: rgba(22, 23, 22, .38); --badge-bg: rgba(17, 34, 26, .80); --badge-ink: #ffffff; --shadow-1: 0 1px 0 rgba(17, 34, 26, .10), 0 6px 11px rgba(17, 34, 26, .13); --shadow-2: 0 1px 0 rgba(17, 34, 26, .12), 0 12px 20px rgba(17, 34, 26, .16); --shadow-3: 0 1px 0 rgba(17, 34, 26, .12), 0 18px 30px rgba(17, 34, 26, .20); --grain: 0; --texture: none; --texture-alpha: 0; --texture-blend: normal; --texture-repeat: repeat; --texture-size: auto; --texture-position: left top; --color-scheme: light; --pad: 18px; --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3 6.2 20.4l1.1-6.5L2.6 9.3l6.5-.9z' fill='%23000'/%3E%3C/svg%3E"); --star-size: 14px; --star-on: var(--ink); --star-off: rgba(17, 34, 26, .50); --rshape-size: 22px; --rshape-off: transparent; --photo-chip: rgba(17, 34, 26, .80); --shadow-sheet: 0 -8px 30px rgba(17, 34, 26, .18); --tape-sun: rgba(171, 212, 193, .5); --tape-sheen: rgba(255, 255, 255, .30); --rshape-glow: none; }
+/* -------------------------------------------------------- 顶部：标题是一枚贴纸
+   单换底色不够 —— 顶部原来是「一枚孤零零的贴纸 + 右边一行裸文字」，没有层次。
+   整体重做成贴纸簿的头版：标题 = 刻度 100 绿纸片 + 6px 模切白边 + 压过上沿的
+   和纸胶带（材质来自 v1 sketch 的 .fp-tape，换成绿族 300 档）；右侧统计 = 白纸
+   发丝内环小签，反向倾斜与标题成对。胶带/模切边/双层影/反向倾斜全是这套语言
+   已有的零件，只做拼贴，不添新材质。 */
+.fp-app .fp-head { padding-bottom: 14px; }
+.fp-app .fp-title { position: relative; align-self: flex-start; padding: 5px 16px 7px; border-radius: var(--radius); background: var(--tint-a); border: var(--cut) solid var(--paper-2); color: var(--ink); font-family: var(--font-display); font-size: 28px; font-weight: 400; letter-spacing: .01em; line-height: 1.2; box-shadow: var(--shadow-2); transform: rotate(-1.2deg); }
+/* 和纸胶带：半透明绿 300 档 + 两侧虚线裁口，压过贴纸上沿一点，别盖住字。
+   「胶感」靠材质不靠色相 —— 半透让下层贴纸的模切边透上来 + shadow-1 浮起
+   + 上沿 --tape-sheen 一条反光：三条齐了才读作「贴了条胶带」（2026-10-21 定） */
+.fp-app .fp-title::before { content: ''; position: absolute; left: 18px; top: -10px; width: 66px; height: 18px; background: var(--tape-sun); border-left: 1px dashed var(--ink-ring); border-right: 1px dashed var(--ink-ring); box-shadow: var(--shadow-1), inset 0 1px 0 var(--tape-sheen); transform: rotate(-3deg); pointer-events: none; }
+/* 右侧统计签：白纸 + 发丝内环（与月份签同材质），反向倾斜与标题成对。
+   选择器用 .fp-title + .fp-head-meta —— 只作用于「标题旁边那一条」，
+   详情/店铺/录入页没有标题的裸 meta（含日期签）不受影响。 */
+.fp-app .fp-title + .fp-head-meta { padding: 5px 12px; border-radius: var(--radius-chip); background: var(--paper-2); box-shadow: var(--shadow-1), inset 0 0 0 1.5px var(--line); transform: rotate(1.4deg); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ink-soft); }
+.fp-app .fp-head-meta { font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ink-soft); }
+/* --------------------------------------------------------- 月份：白贴纸小签 */
+.fp-app .fp-month { margin: 22px 0 12px; gap: 8px; font-family: var(--font-body); font-size: 11px; letter-spacing: .12em; color: var(--ink-faint); }
+.fp-app .fp-month > .fp-month-lab, .fp-app .fp-month-toggle > .fp-month-lab { padding: 3px 11px; border-radius: var(--radius-chip); background: var(--paper-2); color: var(--ink); font-size: 12px; font-weight: 700; letter-spacing: .04em; box-shadow: var(--shadow-1), inset 0 0 0 1.5px var(--line); }
+/* 折叠开关：笔数与小箭头跟着月份签一起待在签里，hover 抬一下影、按下压一点 */
+.fp-app .fp-month-toggle { gap: 0; font-family: var(--font-body); font-weight: 400; letter-spacing: .04em; transition: transform .12s ease; }
+.fp-app .fp-month-toggle:hover { transform: translateY(-1px); }
+.fp-app .fp-month-toggle:active { transform: translateY(0) scale(.97); }
+.fp-app .fp-month-count { padding: 3px 0 3px 8px; opacity: 1; font-size: 12px; color: var(--ink); }
+.fp-app .fp-month-caret { padding-right: 10px; }
+/* --------------------------------------------------------- 店铺页：店头卡
+   base 只给了「白卡 + 发丝边」的结构。这里补上贴纸语言：
+   模切边把卡片从台面上抬起来（与时间轴的记录卡同材质）；
+   店名右侧挂城市小签（同标题统计签）；三个统计数字本来缩在 12px 灰字里 ——
+   但「去过几次 / 平均几分 / 最近啥时候」才是进这家店页的理由，放大成三栏
+   数字 + 细分隔线，数字用展示字族，标签退成小号淡字。 */
+.fp-app .fp-shophead { gap: 13px; padding: var(--cut); }
+/* 横幅满宽之后，文字行自己退回 11px 内边距（6 + 11 = 原来的 17px 舒适区） */
+.fp-app .fp-shop-stats, .fp-app .fp-shop-addr { padding-left: 11px; padding-right: 11px; }
+/* 店面照：横幅贴着模切框铺满，圆角随卡片内圆角，发丝内环压边 */
+.fp-app .fp-shop-photo { height: 122px; border-radius: var(--radius-thumb); background: var(--tint-thumb); box-shadow: inset 0 0 0 1px var(--line); }
+/* 店面照按钮：无图时是卡角一颗小圆钮（白纸 + 发丝环，和返回钮一个量级）；
+   有图时叠在横幅上，底换半透明墨（照片上白圆钮容易糊掉） */
+.fp-app .fp-shop-photoicon { width: 30px; height: 30px; top: 9px; right: 9px; transition: background .14s ease, box-shadow .14s ease, transform .14s ease; }
+.fp-app .fp-shop-photoicon:hover { box-shadow: inset 0 0 0 1.5px var(--line), var(--shadow-1); }
+.fp-app .fp-shop-photoicon:active { transform: scale(.94); }
+.fp-app .fp-shop-photoicon image { opacity: .85; }
+/* 有图：钮叠在照片上，半透明墨底 + 白图标，任何照片上都读得出 */
+.fp-app .fp-shop-photoicon-on { background: var(--photo-chip); box-shadow: none; color: var(--badge-ink); }
+.fp-app .fp-shop-photoicon-on:hover { background: var(--badge-bg); box-shadow: none; }
+.fp-app .fp-shop-photoicon-on image { opacity: 1; }
+.fp-app .fp-shop-stats { display: flex; align-items: stretch; gap: 0; }
+.fp-app .fp-shop-stat { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fp-app .fp-shop-stat + .fp-shop-stat { padding-left: 14px; margin-left: 14px; border-left: 1.5px solid var(--line); }
+.fp-app .fp-shop-statnum { font-family: var(--font-display); font-size: 21px; font-weight: 400; line-height: 1.25; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fp-app .fp-shop-statlab { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; color: var(--ink-faint); }
+/* 城市地图墙：地图 = 纸面卡片（模切边），陆地 = 淡绿纸片（刻度 100/200），图钉 = 小贴纸 */
+.fp-app .fp-map { background: var(--paper-2); border: var(--cut) solid var(--paper-2); box-shadow: var(--shadow-1); }
+.fp-app .fp-map-land { fill: var(--tint-a); stroke: var(--line); stroke-width: 1.2; }
+.fp-app .fp-pin { border: var(--cut) solid var(--paper-2); box-shadow: var(--shadow-1); }
+.fp-app .fp-nocity { border: 1.5px dashed var(--line); background: var(--paper); }
+/* 分省下钻：填充走绿族刻度递进 —— 陆地 100 / 有记录 200 / hover 300 / 当前省 500。
+   基层 .fp-prov 的 fill 被上面 .fp-map-land（0,3,0）压住，所以这里必须逐档重写。
+   （accent-soft 在 matcha 就是 100 档，跟陆地同色，不能拿来当「有记录」。） */
+.fp-app .fp-prov.fp-has { fill: var(--tint-thumb); }
+.fp-app .fp-prov.fp-has:hover { fill: var(--sun); }
+.fp-app .fp-mapback { border: var(--cut) solid var(--paper-2); box-shadow: var(--shadow-1); }
+.fp-app .fp-month-rule { height: 2px; border-radius: 2px; background: var(--line); }
+/* 城市排行：贴纸行不歪（这一块是数据表，歪了就读不齐数）——
+   模切白边与投影沿用贴纸语言，条槽用抹茶刻度 200/500 两档。 */
+.fp-app .fp-rank-row { border: var(--cut) solid var(--paper-2); border-radius: var(--radius); transform: none; }
+.fp-app .fp-rank-row:hover { z-index: 3; box-shadow: var(--shadow-2); }
+.fp-app .fp-rank-row.fp-on { background: var(--tint-a); border-color: var(--paper-2); outline: 1.5px solid var(--accent-deep); outline-offset: 0; }
+.fp-app .fp-rank-bar { background: var(--tint-thumb); }
+.fp-app .fp-rank-bar i { background: var(--accent); }
+.fp-app .fp-rank-row.fp-rank-more { border-style: dashed; background: var(--paper); box-shadow: none; }
+.fp-app .fp-rank-row.fp-rank-more.fp-on { outline: none; background: var(--tint-a); }
+.fp-app .fp-rank-row.fp-rank-more .fp-rank-name { font-family: var(--font-body); font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+/* --------------------------------------------------- 行：模切贴纸，错开叠贴 */
+.fp-app .fp-rec { grid-template-columns: 74px 1fr; gap: 13px; padding: 9px 10px; margin-bottom: 10px; background: var(--paper-2); border: var(--cut) solid var(--paper-2); border-radius: var(--radius); box-shadow: var(--shadow-1); transform: rotate(var(--tilt, 0deg)); transition: transform .16s ease, box-shadow .16s ease; }
+/* 四拍倾斜：同一套歪里换方向，不是随机抖动 —— 相邻两行永远不会同角度 */
+/* 揭起来看一眼 */
+.fp-app .fp-rec:hover { z-index: 3; box-shadow: var(--shadow-2); transform: rotate(0deg) scale(1.012); }
+.fp-app .fp-rec:active { transform: rotate(var(--tilt, 0deg)) scale(.985); }
+.fp-app .fp-thumb { width: 74px; height: 74px; border-radius: var(--radius-thumb); background: var(--tint-thumb); box-shadow: inset 0 0 0 1px var(--line); }
+/* 行内三行字，行距压到 2px：19 / 13 / 11 三档加起来 70px，正好落在 74px 缩略图内 */
+.fp-app .fp-rec-body { padding-right: 54px; gap: 2px; }
+/* 列表里的菜名走正文字体 + 700，不走琥珀：列表要的是四行之间能扫读，
+   琥珀（STHupo）笔画圆而宽、字面大，20px 连着四行会糊成一片卡通。
+   琥珀留给 App 标题与详情页菜名 —— 那两处字号够大，才撑得住它的性格。 */
+.fp-app .fp-eat { font-family: var(--font-body); font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; }
+.fp-app .fp-sub { font-size: 13px; font-weight: 500; }
+.fp-app .fp-when { font-size: 11px; font-weight: 500; }
+/* ------------------------------------- 列表评分：五颗小星，一律墨（不上彩色） */
+.fp-app .fp-stars { gap: 3px; }
+/* 日期元件：一枚圆形时间贴纸（主题浅档底 + 内圈 + 斜贴） */
+.fp-app .fp-sticker { right: 8px; top: 8px; width: 48px; height: 48px; border-radius: 50%; background: var(--sun); color: var(--sun-ink); font-family: var(--font-display); font-size: 14px; font-weight: 400; letter-spacing: .02em; box-shadow: var(--shadow-1), inset 0 0 0 2px var(--ink-ring); transform: rotate(-9deg); }
+/* 宫格卡：与列表卡同一套贴纸材质（模切白边 + 双层影），四角微倾斜打散网格的呆板 */
+.fp-grid { gap: 13px; }
+.fp-app .fp-tile { --tilt: -1.4deg; }
+.fp-app .fp-tile { border: var(--cut) solid var(--paper-2); border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-1); transform: rotate(var(--tilt, 0deg)); transition: transform .14s ease, box-shadow .14s ease; }
+.fp-app .fp-tile:hover { z-index: 3; box-shadow: var(--shadow-2); transform: rotate(0deg) scale(1.02); }
+.fp-app .fp-tile:active { transform: rotate(var(--tilt, 0deg)) scale(.985); }
+/* 有照片时脚条压着照片下沿；日期贴缩小一号，别把小卡角全占了 */
+.fp-app .fp-tile .fp-sticker { width: 38px; height: 38px; font-size: 11.5px; right: 6px; top: 6px; box-shadow: var(--shadow-1), inset 0 0 0 1.5px var(--ink-ring); }
+/* ------------------------------------------------------------- 底部 */
+.fp-app .fp-dock { background: linear-gradient(to top, var(--paper) 88%, var(--dock-fade)); }
+/* 大槽（hero 是 1:1 的 375px 方槽 / 录入的照片槽是 184px 高的相纸）空着时必须说话：
+   槽里给一句「点击从相册选一张」，相机图形也加浓（.5 → .72）——
+   20px @ .5 铺在这么大的面积上等于没画。图形尺寸没改，只改了浓淡。 */
+.fp-app .fp-drop .fp-slot-glyph, .fp-app .fp-hero .fp-slot-glyph { opacity: 1; color: var(--ink-soft); }
+.fp-app .fp-drop .fp-slot-empty, .fp-app .fp-hero .fp-slot-empty { gap: 8px; }
+.fp-app .fp-drop .fp-slot-hint, .fp-app .fp-hero .fp-slot-hint { font-size: 12.5px; letter-spacing: .02em; color: var(--ink-soft); }
+/* 缩略图里那枚相机图形：base 的 .5 太淡，74px 里读不出「这是一个照片槽」 */
+.fp-app .fp-thumb .fp-slot-glyph { opacity: 1; color: var(--ink-soft); }
+.fp-app .fp-btn-primary { width: 100%; height: 56px; border: 0; border-radius: var(--radius); background: var(--accent); color: var(--accent-ink); font-family: var(--font-display); font-size: 18px; font-weight: 400; letter-spacing: .06em; text-indent: .06em; box-shadow: 0 8px 18px var(--accent-soft); }
+/* 禁用态：base 那条 (0,3,1) 会赢过上面的 (0,3,0)，这里抬到 (0,4,1) 保住贴纸的形（只退颜色） */
+.fp-app .fp-btn.fp-btn-primary.fp-disabled { background: var(--btn-disabled); color: var(--btn-disabled-ink); border-color: transparent; box-shadow: var(--shadow-1); }
+.fp-app .fp-btn-ghost { height: 48px; border: 0; border-radius: var(--radius-btn); background: var(--paper-2); color: var(--ink); font-size: 15px; font-weight: 700; box-shadow: var(--shadow-1); transition: box-shadow .12s ease, transform .12s ease, background .12s ease; }
+.fp-app .fp-btn-ghost:hover { background: var(--paper-2); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.fp-app .fp-btn-ghost:active { box-shadow: var(--shadow-1); transform: translateY(0) scale(.985); }
+/* 删除和编辑是同一张白贴纸，靠字色和图标分开，不描边。
+   必须放在 .fp-btn-ghost 那两条之后：同特异性（0,3,0 / 0,4,0），靠加载顺序定胜负。 */
+.fp-app .fp-btn-del { background: var(--paper-2); color: var(--danger); box-shadow: var(--shadow-1); }
+.fp-app .fp-btn-del:hover { background: var(--paper-2); box-shadow: var(--shadow-2); }
+.fp-app .fp-blockhint { padding: 0; background: transparent; font-size: 12.5px; font-weight: 700; box-shadow: none; }
+/* ------------------------------------------------------------ Tab 栏
+   贴纸语言里「一条横过的栏」不倾斜、不模切 —— 它就是一张白纸台面，
+   分离靠上边缘那条发丝线 + 向上的柔影（base 的默认值已经如此，这里显式写出来是为了覆盖口径清楚）。 */
+.fp-app .fp-tabbar { background: var(--paper-2); box-shadow: 0 -1px 0 var(--line), 0 -10px 26px var(--hover); }
+.fp-app .fp-tab { font-weight: 700; letter-spacing: .02em; }
+.fp-app .fp-tab-add { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 18px var(--accent-soft); }
+/* ------------------------------------------------------------- 录入表单
+   表单本身**不**做成卡片：字段直接落在青玉台面上，输入框是白贴纸。
+   （v1 也是这样 —— 表单再套一层白卡，白贴纸就没有台面可浮了。） */
+.fp-app .fp-label { text-transform: none; font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ink-soft); }
+.fp-app .fp-req { padding: 1px 5px; border: 0; border-radius: 6px; background: var(--accent-soft); color: var(--accent-deep); font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+/* 可选标记：与 .fp-req 同尺寸同圆角，只是「不填满」——
+   实底 = 必填、发丝描边 = 可空。两边对等才读得出这是一组状态，
+   原来「可空」是一段裸文字，「必填」是一枚徽章，看不出是同一件事。 */
+.fp-app .fp-opt { padding: 1px 5px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink-faint); font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.fp-app .fp-input { padding: 10px 14px; border: 0; border-radius: 14px; background: var(--paper-2); color: var(--ink); font-family: var(--font-display); font-size: 22px; font-weight: 400; letter-spacing: .01em; box-shadow: var(--shadow-1); }
+.fp-app .fp-input:focus { border-bottom-color: transparent; box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-1); }
+/* 占位符走正文字体：22px 的琥珀字面又大又重，空着的时候读起来像已经填好了 */
+.fp-app .fp-input-ph { font-family: var(--font-body); font-weight: 400; letter-spacing: 0; }
+.fp-app .fp-input-sm { font-family: var(--font-body); font-size: 16px; font-weight: 500; letter-spacing: 0; }
+/* 视觉 min-height 40（原 36，规则已对齐数值）；::after 上下各补 4 → 命中区 48。
+   只向上下扩，避免相邻 chip 的横向命中区互相叠上。 */
+.fp-app .fp-chip { position: relative; min-height: 40px; padding: 7px 13px; border: 0; border-radius: var(--radius-chip); background: var(--paper-2); color: var(--ink-soft); font-size: 13px; font-weight: 600; box-shadow: var(--shadow-1); transition: color .12s ease, box-shadow .12s ease, transform .12s ease; }
+.fp-app .fp-chip::after { content: ""; position: absolute; top: -4px; right: 0; bottom: -4px; left: 0; }
+.fp-app .fp-chip:hover { color: var(--accent-deep); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.fp-app .fp-chip.fp-on { background: var(--tint-thumb); color: var(--ink); box-shadow: var(--shadow-1); transform: none; }
+/* 照片槽：拍立得相纸（底边留白是「相纸」，不是内边距） */
+.fp-app .fp-drop { height: 184px; border: 10px solid var(--paper-2); border-bottom-width: 30px; border-radius: var(--radius-thumb); box-shadow: var(--shadow-1); transform: rotate(-.8deg); }
+/* 评分输入：五枚可撕的白圆贴纸，每枚里面一颗星（选中那枚填青绿）。
+   `display: grid` 不是排版偏好：`::before` 那颗星是**格项**才会被 blockify，
+   否则它只是行内盒，width/height 全被忽略，mask 直接看不见（base 的 .fp-rshape 是 display: block）。 */
+.fp-app .fp-rshape { display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--line); border-radius: 50%; background: var(--paper-2); color: var(--star-off); box-shadow: var(--shadow-1); transition: background .12s ease, color .12s ease, transform .12s ease, box-shadow .12s ease; }
+.fp-app .fp-rshape::before { content: ""; width: 17px; height: 17px; background-color: currentColor; -webkit-mask-image: var(--star); mask-image: var(--star); -webkit-mask-size: 17px 17px; mask-size: 17px 17px; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+/* 命中区 44：内圆 rshape 34 不动，只放大透明外圈 —— 五枚星连成排，
+   横向间距靠这里顶到 W3C 的 24 最小值之上 */
+.fp-app .fp-star { width: 44px; height: 44px; }
+/* 像在撕一张贴纸 */
+.fp-app .fp-star:hover .fp-rshape { transform: translateY(-3px) rotate(-8deg); box-shadow: var(--shadow-2); }
+.fp-app .fp-rshape.fp-on { background: var(--select); border-color: var(--select); color: var(--select-ink); box-shadow: var(--shadow-2); }
+.fp-app .fp-auto { border: 0; border-radius: var(--radius); background: var(--paper-2); box-shadow: var(--shadow-1); }
+.fp-app .fp-auto-val { font-weight: 700; }
+.fp-app .fp-auto-edit { font-weight: 700; color: var(--accent-deep); }
+.fp-app .fp-seg { border: 0; border-radius: var(--radius-chip); background: var(--paper-2); box-shadow: var(--shadow-1); }
+.fp-app .fp-seg .fp-seg-btn { font-size: 12.5px; font-weight: 700; }
+/* 时段选中只铺「时间」浅档。黑圈会把这颗小钮描成线框。 */
+.fp-app .fp-seg .fp-seg-btn.fp-on { background: var(--sun); color: var(--sun-ink); box-shadow: none; }
+/* ------------------------------------------------------------- 详情 */
+.fp-app .fp-hero { border: 10px solid var(--paper-2); border-bottom-width: 34px; border-radius: var(--radius-thumb); box-shadow: var(--shadow-2); transform: rotate(1.4deg); }
+/* 详情页的评分：独立一行、比列表大一档（列表 14px / 这里 19px）。
+   这一页的两个数据是菜名与评分：菜名在标题区，评分紧跟照片，不能只当 meta 里的一串字。 */
+.fp-app .fp-detail-rate { margin-top: -8px; }
+.fp-app .fp-detail-rate .fp-stars { --star-size: 19px; gap: 4px; }
+.fp-app .fp-detail-rate .fp-rate-num { margin-left: 0; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.fp-app .fp-detail-meta { font-size: 13.5px; font-weight: 500; gap: 8px 14px; }
+/* 短评：一张写字的贴纸 */
+.fp-app .fp-note { padding: 13px 15px; border: var(--cut) solid var(--paper-2); border-left: var(--cut) solid var(--paper-2); border-radius: var(--radius); background: var(--paper-2); color: var(--ink); font-size: 15px; line-height: 1.8; box-shadow: var(--shadow-1); transform: rotate(-.7deg); }
+.fp-app .fp-iconbtn { width: 44px; height: 44px; margin-left: 0; border-radius: 50%; background: var(--paper-2); color: var(--ink); box-shadow: var(--shadow-1); transition: box-shadow .12s ease, transform .12s ease; }
+.fp-app .fp-iconbtn:hover { background: var(--paper-2); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.fp-app .fp-datechip { font-weight: 700; color: var(--ink-soft); }
+/* -------------------------------------------------------------- 空态 */
+.fp-app .fp-empty { margin-top: 8px; padding: 48px 20px; border: 3px dashed var(--line); border-radius: var(--radius); background: var(--paper-2); color: var(--ink-soft); box-shadow: var(--shadow-1); }
+/* 空态引导的一摞示例照（static/photos/stack-*.jpg，只在首访出现）。
+   位置与倾角由 JS 内联（与记录堆叠同一套 FP_STACK_ROT），这里只管盒子与投影。
+   归属一次性转换脚本的 EXTRA 段（已随工作区清理删除）。 */
+.fp-app .fp-empty.fp-empty-intro { gap: 16px; padding: 34px 20px 30px; }
+.fp-intro-stack { position: relative; width: 168px; height: 168px; }
+.fp-intro-photo { position: absolute; top: 12px; right: 12px; bottom: 12px; left: 12px; width: calc(100% - 24px); height: calc(100% - 24px); border: 4px solid var(--paper-2); border-radius: 4px; background: var(--tint-a); box-shadow: var(--shadow-2); }
+.fp-empty-intro-text { max-width: 240px; font-size: 13.5px; line-height: 1.7; }
+/* -------------------------------------------------------------- 弹窗 */
+.fp-app .fp-confirm { background: var(--scrim); }
+.fp-app .fp-confirm-card { background: var(--paper-2); border-color: var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); }
+/* 弹窗里的按钮收成常规尺寸（base 那条同特异性、比这里先加载，会被压掉，所以必须重写尺寸） */
+.fp-app .fp-confirm-actions .fp-btn-primary { width: auto; height: 42px; padding: 0 20px; border: 0; border-radius: var(--radius-chip); font-family: var(--font-body); font-size: 15px; font-weight: 700; letter-spacing: .04em; box-shadow: var(--shadow-1); }
+.fp-app .fp-confirm-actions .fp-btn-ghost { height: 42px; padding: 0 18px; border-radius: var(--radius-chip); box-shadow: var(--shadow-1); }
+/* 危险按钮必须是 --danger：上面那条 (0,4,0) 的同元素规则会把 .fp-btn-danger 压掉，抬到 (0,5,0) */
+.fp-app .fp-confirm-actions .fp-btn-primary.fp-btn-danger { background: var(--danger); color: var(--danger-ink); }
+/* 弹窗标题是一句人话（「删掉「甜水面」？」），走正文字体：琥珀的「删」是繁体字形 刪 */
+.fp-app .fp-confirm-card .fp-eat { font-family: var(--font-body); font-size: 19px; font-weight: 700; letter-spacing: .01em; }
+/* -------------------------------------------------------------- 胶带
+   v2 的 .fp-tape 只在 `variant === 'journal'` 时渲染（见 screens.jsx），
+   所以贴纸青玉当前**不**会出现胶带；这条规则留着，接线一旦打开就有得可看。
+   胶带属于手账/拼贴语言，与贴纸同族，所以宽度、撕口、微旋转都照 v1 的拼贴写法。 */
+.fp-app .fp-tape { position: absolute; left: 50%; top: -10px; width: 74px; height: 20px; margin-left: -37px; z-index: 4; background: var(--tape); border-left: 1px dashed var(--line); border-right: 1px dashed var(--line); transform: rotate(-3deg); pointer-events: none; }
+.fp-app .fp-hero .fp-tape { top: 3px; }
+/* —— 追加规则（转换脚本生成，勿手改） ——
+   分组约定：每段规则都带【类别】标签，新规则先归入已有类别
+   （尺寸与构图 / 平台壳差异 / 局部布局 / 安全区 / 字体 / 触控热区 /
+    按压反馈 / 控件形态 / 图标定位 / 入场动画 / 微调），无对应再新开。
+   追加前先在本区 grep 同选择器，避免两段规则互相覆盖。 —— */
+
+/* —— 【尺寸与构图】显式高度 / 定位，替代原型里靠元素或绝对定位撑出来的面 —— */
+.fp-tile-media { height: 163.5px; }
+.fp-hero { height: 339px; }
+.fp-detail-shopname, .fp-detail-noshop { font-weight: 500; color: var(--ink); }
+
+/* —— 【平台壳差异】小程序原生导航栏 / hover-class / Canvas 与网页壳的出入 —— */
+/* #ifdef weapp */
+/* 原型头部 62px 顶部留白是给全屏网页状态栏的；小程序已有原生导航栏，再叠一层页面整体偏下。 */
+.fp-head { padding-top: 16px; }
+/* #endif */
+/* 城市页底图是 Canvas：原型 <svg> 由 .fp-map-svg 的绝对定位铺满地图框，
+   小程序没有这个元素，画布类需自带同样的定位，否则 canvas 落默认 300×150、比例全错。 */
+.fp-map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+/* 原生导航栏接管返回与标题后，详情页头部只剩日期签一个子元素：
+   space-between 下单元素会靠左，强制靠右保住原型构图。 */
+.fp-head-bar-end { justify-content: flex-end; }
+/* 小程序按压反馈：hover-class 挂在元素上，按下时套用 —— H5 端 :hover 已有同类反馈，
+   这里只补 weapp 缺的按压态（按下压暗半档，不引入新的视觉元素）。 */
+/* #ifdef weapp */
+.fp-hover { opacity: .82; }
+/* #endif */
+
+/* —— 【局部布局】原型用标签/伪元素解决、小程序无对应手段的行内排版 —— */
+/* 店铺页地址行：地址文本与「改」并排。addrbtn 让位可收缩（长地址省略号），
+   「改」固定在右侧 —— 地址一旦存过原本就没了编辑入口，这颗钮是唯一出口。 */
+.fp-shop-addrrow { display: flex; align-items: center; gap: 8px; }
+.fp-shop-addrrow .fp-shop-addrbtn { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-shop-addredit { flex: 0 0 auto; font-size: 12px; font-weight: 700; color: var(--accent-deep); }
+
+/* —— 【安全区】设计值不动，刘海屏的 home indicator 另加（tabbar 在此，dock 见后）——
+   底部安全区：自绘 tabbar 的 30px 下内边距是设计值（375 宽下的呼吸位），
+   刘海屏还要再让开 home indicator —— 高度与下内边距同时加上安全区，
+   内容区高度恒为改动前的 46px（84 − 8 − 30），栏内排版一位不移，
+   只是整条栏在刘海屏上长得更高、内容离底更远。
+   H5 上 env() 退 0（页面没开 viewport-fit=cover）→ 非刘海屏两端都等于改动前。
+   列表底部留白同步加：栏长高了，不给回来最后一笔会被压住。 */
+.fp-tabbar { height: calc(84px + env(safe-area-inset-bottom)); padding-bottom: calc(30px + env(safe-area-inset-bottom)); }
+.fp-app.fp-tabbar-page .fp-scroll { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+/* —— 【字体】展示字 / 数字栈换成两端真存在的系统栈（原栈在手机端整族退化）——
+   原型 --font-display 首选 "STHupo / 华文琥珀"：这颗字 Windows 要装 Office 才有，
+   iOS / Android / 微信里都不存在 —— 手机上首页贴纸标题、菜名、店名、店铺统计数字、
+   日期圆贴、底部主按钮整族的「装饰字」一起退化成系统正文字。
+   而 matcha 又把这七处统一压到 font-weight: 400（琥珀只有一个字重，字重在那颗字上
+   本来就不参与层级），退化之后连「笔画粗一点」的强调都剩不下，展示字比正文还平。
+   这里把整族换成两端都真存在的栈，字重按 base 的原意还回来（标题/数字/按钮 700，
+   内容类的菜名与输入框留 600），并收回当初为撑琥珀宽字面给的正字距 ——
+   用「更重的系统字」顶替「缺失的装饰字」，不引入字体文件，两端同一套。
+   --font-num 同理：老栈把微软雅黑/苹方排在 ui-monospace 前面，
+   iOS 落苹方、安卓落 generic monospace —— 同一串数字两端长得不一样；
+   统一落到系统正文字后，中文标签（今天 / 已贴 36 张）与数字同族，
+   台账对齐仍由 base 的 font-variant-numeric: tabular-nums 保证。 */
+.fp-app {
+  --font-display: -apple-system, "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-num: "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+.fp-app .fp-title { font-weight: 700; letter-spacing: -.01em; }
+.fp-app .fp-shop-statnum, .fp-app .fp-sticker, .fp-app .fp-btn-primary { font-weight: 700; }
+.fp-app .fp-input { font-weight: 600; }
+/* —— 【触控热区】低于 44px 的可点元素，用一圈透明伪元素把命中面补到 44 ——
+   ::after 只当命中面（absolute + 负 inset），不占布局、不改半像素视觉；
+   变体里的 .fp-chip 早就用同一招（上下各补 4px）。横向都按邻居的实际间隙收着扩，
+   免得两个控件的命中区叠在一起、一指点到隔壁去。
+   这些元素要么是 flex 子项、要么自带 grid/absolute，::after 的包含块都成立。 */
+/* 搜索框的清除键：视觉 ≈26×21 → 44×45。左边只越进输入框右缘 9px
+   （输入框本体够宽，用户点的是中段，角上让出一点无碍）。 */
+.fp-search-clear { position: relative; }
+.fp-search-clear::after { content: ""; position: absolute; top: -12px; right: -9px; bottom: -12px; left: -9px; }
+/* 月份折叠开关：视觉进 ≈24 → 44。上下各 12px 落在月份那一行的留白里，够不到相邻卡片。 */
+.fp-app .fp-month-toggle { position: relative; }
+.fp-app .fp-month-toggle::after { content: ""; position: absolute; top: -12px; right: 0; bottom: -12px; left: 0; }
+/* 表单位置字段的「改」：视觉 ≈24×16，整块卡里唯一控件，原先一整个 hit 区段都没给它
+   （评审点名的触控空洞）。纵向 ±14 → 44；横向各借 8 → 40，右边是 .fp-auto 的
+   内边距（24px，够借），左边只压到自动值的文字区 —— 那里点了本来就什么都不发生。 */
+.fp-app .fp-auto-edit { position: relative; }
+.fp-app .fp-auto-edit::after { content: ""; position: absolute; top: -14px; right: -8px; bottom: -14px; left: -8px; }
+/* 位置弹层的关闭键：26×26 → 44×44。四周是弹层自己的内边距，没人来抢。 */
+.fp-area-close { position: relative; }
+.fp-area-close::after { content: ""; position: absolute; top: -9px; right: -9px; bottom: -9px; left: -9px; }
+/* 店头相机钮：30×30 → 44×44。它浮在店面照角上，是该区域唯一的控件。 */
+.fp-app .fp-shop-photoicon::after { content: ""; position: absolute; top: -7px; right: -7px; bottom: -7px; left: -7px; }
+/* 店铺页地址行的「改」：视觉 ≈12×18。纵向补满 44；右边是卡片内边距，借满 11px，
+   左边是「点地址复制」那颗键、只吃 4px（两者间距 8px）—— 再往左就要和复制的命中区打架。 */
+.fp-shop-addredit { position: relative; }
+.fp-shop-addredit::after { content: ""; position: absolute; top: -13px; right: -11px; bottom: -13px; left: -4px; }
+
+/* —— 【按压反馈】WXSS 不认 :active ——
+   样式里预定的按压缩放（记录卡、宫格卡、月份签、加号、相机钮、主/次按钮）在真机上
+   一条都不生效，全站只剩第二期 hoverClass 的那个「变淡」。这里把每条 :active
+   改写成等价、但跟随 hover-class 的压回，按下才有手感。
+   只注入 weapp：H5 的 :active / :hover 本来就是好的，不重复叠一层。 */
+/* #ifdef weapp */
+.fp-app .fp-rec.fp-hover { transform: rotate(var(--tilt, 0deg)) scale(.985); }
+.fp-app .fp-tile.fp-hover { transform: rotate(var(--tilt, 0deg)) scale(.985); }
+.fp-app .fp-month-toggle.fp-hover { transform: translateY(0) scale(.97); }
+.fp-app .fp-tab-add.fp-hover { transform: scale(.94); }
+.fp-app .fp-shop-photoicon.fp-hover { transform: scale(.94); }
+.fp-app .fp-btn-primary.fp-hover { transform: scale(.97); }
+.fp-app .fp-btn-ghost.fp-hover { box-shadow: var(--shadow-1); transform: translateY(0) scale(.985); }
+/* #endif */
+
+/* —— 【尺寸与构图】详情页 hero：空态收短 ——
+   339px 是「1:1 的方相纸」，有照片时值得；没照片时那半屏只是个空槽，
+   首屏近一半被它占掉，菜名/评分/店名/短评全被推到折线以下。空态收短到 200px。 */
+.fp-app .fp-hero.fp-hero-empty { height: 200px; }
+
+/* —— 【控件形态】评分的形状统一 ——
+   列表、宫格、详情的读数都是 ★ 形（.fp-star-glyph 走 --star 蒙版）；
+   录入页的输入却是「34px 空圆贴纸里塞一颗 17px 小星」—— 那颗星在圆里太小，
+   远看就是五个空圈：同一个「几分」在两处成了两套形状。这里把输入也做成星形，
+   同样走 --star 蒙版，尺寸放大到 28px（看得清、也够点），
+   选中态用 --accent-deep（#377257，压台面 5.24:1）。500 档留给主动作，读数侧仍一律墨色。 */
+.fp-app .fp-star { width: 44px; height: 44px; }
+.fp-app .fp-rshape { display: block; width: 28px; height: 28px; border: 0; border-radius: 0; background: var(--star-off); box-shadow: none; -webkit-mask-image: var(--star); mask-image: var(--star); -webkit-mask-size: 28px 28px; mask-size: 28px 28px; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.fp-app .fp-rshape::before { display: none; }
+.fp-app .fp-rshape.fp-on { background: var(--accent-deep); }
+
+/* —— 【安全区】底部动作区（dock）——
+   dock 的 46px 下内边距是设计值（375 宽下的呼吸位），与 tabbar 是同一档问题：
+   刘海屏的 home indicator 会压在它上面，主按钮贴得太下。
+   处理方式与 tabbar 一致 —— 设计值不动，安全区另加：
+   H5 上 env() 退 0（页面没开 viewport-fit=cover）→ 非刘海屏两端都等于改动前。
+   录入页的内容区陪在同一屏上，栏长高了不把底部留白同步加回来，
+   滚到底时最后一个字段会被 dock 压住。 */
+.fp-dock { padding-bottom: calc(46px + env(safe-area-inset-bottom)); }
+.fp-scroll.fp-scroll-dock { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+
+/* —— 【控件形态】输入框高度：不能交给基础库的默认值 ——
+   weapp 的 <input> 不是靠内容撑高的：基础库给了它一个固定的默认盒高
+   （实测字 22px 的 .fp-input 与字 16px 的 .fp-input-sm 都停在 22.4px，与字号无关），
+   box-sizing: border-box 之下的上下各 20rpx 内边距已经吃掉整个盒子，
+   内容盒只剩 1~2px —— 录入页「吃了什么」「店」「短评」的字被自己的盒子上下削掉。
+   H5 那边是普通 <input>，本来由行盒 + 内边距撑开，没有这个问题。
+   这里显式给高度，并让行高正好等于内容盒高度（盒高 − 上下内边距 40rpx），
+   行盒无论靠上还是居中摆放都刚好填满，不会再裁字；
+   两档字号各给一档高度，保持「菜名大、店/短评小」的原有层级。
+   不用 height: auto —— 默认盒高是不是 height 声明没把握，min-height 一定压得住它。 */
+.fp-app .fp-input { height: auto; min-height: 52px; line-height: 32px; }
+.fp-app .fp-input-sm { min-height: 44px; line-height: 24px; }
+
+/* —— 【图标定位】图标别被「照片满铺」规则按倒 ——
+   原型里槽内照片是 <img>、图标是 <svg>，两者各走各的选择器；
+   转换后照片和图标都成了 <image> 节点，满铺规则就连图标一起命中：
+     · .fp-slot image 的 top/left 走 var(--stack-pad)，空态图标没有这个变量，
+       这两条声明在计算期作废落回 auto —— 图标停在静态位置，
+       而同一规则里的 position: absolute 已让它脱出文档流，
+       外层 .fp-slot-glyph 失去内容塌成 0×0，图标不再占位，
+       于是列向居中算出来的位置只剩提示文字那一格，相机图标正好压在字上；
+     · .fp-shop-photo image 用的是字面量 0，会把店头相机钮钉在 30px 圆片的左上角，
+       它本身是定位元素，静态位置同样不会回中。
+   两处都把图标放回正常流：父级的居中（.fp-slot-empty 的列向 flex、
+   .fp-shop-photoicon 的 grid）重新接管，照片本身不受影响。 */
+.fp-slot .fp-slot-glyph image,
+.fp-shop-photo .fp-shop-photoicon image { position: static; }
+
+/* —— 【入场动画】首页 → 详情页的入场节奏 ——
+   转场本身由微信做：新页面整体从右侧推入（约 0.3s）。原先详情页沿用全局 .fp-enter
+   的「整块从下往上浮」—— 方向与页面推入垂直，6 个首屏块又同时到位，
+   页面在往左走、内容却在往上跳，两股劲拧着。
+   这里改成与推入同向的逐层落位：容器不再整体动，节奏下放到首屏 6 个块，
+   按阅读顺序错开 40ms 依次从右下淡入，缓动走快起慢收，
+   收尾 0.42s（比推入慢一点点）—— 像被页面带进来，而不是自己跳进来。
+   位移 12×6 是上限，再大就会晃；.fp-scroll 本就 overflow-x: hidden，
+   位移期间撑不出横向滚动。keyframes 的 to 不写 transform：
+   动画收尾采样元素自身的基础值，不会把元素原有的变换抹平。 */
+@keyframes fp-in {
+  from { opacity: 0; transform: translate3d(12px, 6px, 0); }
+  to { opacity: 1; }
+}
+/* 菜名与日期签已并入 .fp-head 的标题行（不在 .fp-detail 内），入场动画从照片起算 */
+.fp-detail.fp-enter { animation: none; }
+.fp-detail.fp-enter > .fp-hero,
+.fp-detail.fp-enter > .fp-detail-rate,
+.fp-detail.fp-enter > .fp-detail-meta,
+.fp-detail.fp-enter > .fp-note,
+.fp-detail.fp-enter > .fp-hint,
+.fp-detail.fp-enter > .fp-detail-actions { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) both; }
+.fp-detail.fp-enter > .fp-detail-rate { animation-delay: .04s; }
+.fp-detail.fp-enter > .fp-detail-meta { animation-delay: .08s; }
+.fp-detail.fp-enter > .fp-note,
+.fp-detail.fp-enter > .fp-hint { animation-delay: .12s; }
+.fp-detail.fp-enter > .fp-detail-actions { animation-delay: .16s; }
+
+/* —— 【入场动画】逐层档位（挂在 .fp-enter 容器的子块上，三屏共用） ——
+   录入页 6 个 .fp-field 同名、WXSS 又不支持 :nth-child，只能靠类名顺序定位；
+   店铺页 4 块（店照 / 店名行 / 三格数字 / 地址行）同理。
+   容器自己停手（上面 .fp-form / .fp-shophead 的 animation: none），
+   节奏全交给档位子块：步进 35ms、7 档收尾 0.43s，与详情页同拍。
+   根页（时间轴 / 城市）走的是另一条路 —— 没有推入，
+   整块内容用现成 .fp-enter 的淡入淡起，底部 tabbar 是兄弟节点，不跟着动。 */
+.fp-form.fp-enter, .fp-shophead.fp-enter { animation: none; }
+.fp-enter .fp-enter-1 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) both; }
+.fp-enter .fp-enter-2 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .035s both; }
+.fp-enter .fp-enter-3 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .07s both; }
+.fp-enter .fp-enter-4 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .105s both; }
+.fp-enter .fp-enter-5 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .14s both; }
+.fp-enter .fp-enter-6 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .175s both; }
+.fp-enter .fp-enter-7 { animation: fp-in .22s cubic-bezier(.16, .84, .38, 1) .21s both; }
+
+/* —— 【微调】标题贴纸上的和纸胶带加长 ——
+   原型给的 66px 只压住标题左上角一小截，标题「X师傅美食记」近 200px 宽，
+   胶带短得像枚方贴，压不住上沿。拉到 96px 横过大半个标题才像「贴住」；
+   左起点不动（仍从贴纸内侧 18px 起），两侧虚线裁口、半透明绿档、微旋转都沿用原样。
+   两张根页共用 .fp-title（时间轴 / 城市页），一条规则同时生效。
+   —— 2026-10-22 补 max-width：96px 是按宽标题定的，短标题（城市名「成都」
+   贴纸内宽仅 ~88px）套上去胶带直接探出右缘。calc(100% - 40px) = 左起点 18 +
+   右留白 22 的几何上限：贴纸 ≥136px 内宽（标题 ≥3.5 字，含时间轴 / 美食足迹 /
+   长菜名）仍取满 96px、观感不变；更窄的按比例收，胶带永远停在贴纸内侧。 */
+.fp-app .fp-title::before { width: 96px; max-width: calc(100% - 40px); }
+
+/* —— 【键盘可达】H5 端给 tabindex 元素（app.js 的 FP_KBD_CLASSES，与此清单同源，
+   改一处要同步另一处）画的焦点环。小程序没有键盘 Tab 流，WXSS 对 :focus-visible
+   的支持也没把握 —— 圈进 #ifndef weapp，只有 H5 吃这份。
+   用 outline 不用 box-shadow：贴纸的柔影就是 box-shadow，画环会把阴影顶掉。 */
+/* #ifndef weapp */
+.fp-app .fp-rec:focus-visible, .fp-app .fp-tile:focus-visible, .fp-app .fp-slot:focus-visible,
+.fp-app .fp-sub-shoplink:focus-visible, .fp-app .fp-month-toggle:focus-visible, .fp-app .fp-tab:focus-visible,
+.fp-app .fp-tab-add:focus-visible, .fp-app .fp-pstrip-cell:focus-visible, .fp-app .fp-pstrip-add:focus-visible,
+.fp-app .fp-undobar-btn:focus-visible, .fp-app .fp-empty-reset:focus-visible, .fp-app .fp-search-clear:focus-visible,
+.fp-app .fp-seg-btn:focus-visible, .fp-app .fp-chip:focus-visible, .fp-app .fp-star:focus-visible,
+.fp-app .fp-auto-edit:focus-visible, .fp-app .fp-btn:focus-visible, .fp-app .fp-arearow:focus-visible,
+.fp-app .fp-area-back:focus-visible, .fp-app .fp-area-close:focus-visible, .fp-app .fp-pin:focus-visible,
+.fp-app .fp-rank-row:focus-visible, .fp-app .fp-rank-more:focus-visible, .fp-app .fp-mapback:focus-visible,
+.fp-app .fp-nocity:focus-visible, .fp-app .fp-backup-btn:focus-visible, .fp-app .fp-shop-photoicon:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+/* 输入框本体不画环：焦点由外框在画（.fp-search.fp-focus / .fp-input:focus 的
+   青玉光圈），两层环叠着像糊了重影。 */
+.fp-app input:focus-visible { outline: none; }
+/* #endif */
+
+/* —— 【减动效】系统开了「减少动态效果」时的替代档：入场与盖章只留 0.12s 纯淡入，
+   位移 / 缩放 / 旋转 / 逐级延迟全部撤掉；照片堆叠的尺寸过渡直接落位。
+   刻意不是 animation: none —— 入场动画都带 both 填充，整段砍掉会让元素停在
+   from 态（opacity: 0）永远不显影；同名动画换成 opacity-only 才安全。
+   按压、翻角这类状态反馈保留：位移都在 2px 内，是操作的回声不是装饰。
+   放在文件末尾，同优先级下压过上面的位移动画；.fp-form / .fp-detail 容器
+   的 animation: none 是更高特异度，照旧生效（它们的子块走下面的淡入）。 */
+@keyframes fp-quiet { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .fp-enter { animation: fp-quiet .12s ease both; }
+  .fp-enter .fp-enter-1, .fp-enter .fp-enter-2, .fp-enter .fp-enter-3,
+  .fp-enter .fp-enter-4, .fp-enter .fp-enter-5, .fp-enter .fp-enter-6,
+  .fp-enter .fp-enter-7 { animation: fp-quiet .12s ease both; }
+  .fp-detail.fp-enter > .fp-hero, .fp-detail.fp-enter > .fp-detail-rate,
+  .fp-detail.fp-enter > .fp-detail-meta, .fp-detail.fp-enter > .fp-note,
+  .fp-detail.fp-enter > .fp-hint, .fp-detail.fp-enter > .fp-detail-actions { animation: fp-quiet .12s ease both; }
+  .fp-stamping .fp-stamp-target { animation: fp-quiet .12s ease both; }
+  .fp-slot.fp-slot-stack image { transition: none; }
+}
+
