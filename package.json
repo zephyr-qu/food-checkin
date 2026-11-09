@@ -13,7 +13,7 @@
     "build:weapp": "taro build --type weapp",
     "dev:h5": "taro build --type h5 --watch",
     "build:h5": "taro build --type h5",
-    "lint": "eslint src tools config test --ext .js,.jsx",
+    "lint": "eslint src config test --ext .js,.jsx",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
